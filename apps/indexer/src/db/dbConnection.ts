@@ -13,5 +13,11 @@ export const sequelize = new Sequelize(activeChain.connectionString, {
     timestamps: false,
     freezeTableName: true
   },
-  models: chainModels
+  models: chainModels,
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false
+    }
+  }
 });
