@@ -1,16 +1,16 @@
 "use client";
-import { Dispatch, ReactNode, SetStateAction } from "react";
+import type { ReactNode } from "react";
 import { CustomTooltip } from "@akashnetwork/ui/components";
 import { InfoCircle } from "iconoir-react";
 
-import { ServiceType } from "@src/types";
+import type { ServiceType } from "@src/types";
 import { FormPaper } from "./FormPaper";
 
 type Props = {
   currentService: ServiceType;
   serviceIndex?: number;
   children?: ReactNode;
-  setIsEditingCommands: Dispatch<SetStateAction<boolean | number>>;
+  setIsEditingCommands: (value: boolean | number) => void;
 };
 
 export const CommandList: React.FunctionComponent<Props> = ({ currentService, setIsEditingCommands, serviceIndex }) => {
@@ -22,7 +22,7 @@ export const CommandList: React.FunctionComponent<Props> = ({ currentService, se
         <CustomTooltip
           title={
             <>
-              Custom command use when executing container.
+              Custom command used when executing container.
               <br />
               <br />
               An example and popular use case is to run a bash script to install packages or run specific commands.

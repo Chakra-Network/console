@@ -2,6 +2,7 @@ import { certificateManager } from "@akashnetwork/akashjs/build/certificates/cer
 import { SDL } from "@akashnetwork/akashjs/build/sdl";
 import type { Registry } from "@cosmjs/proto-signing";
 import axios from "axios";
+import nock from "nock";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { container } from "tsyringe";
@@ -10,9 +11,9 @@ import { app } from "@src/app";
 import { config } from "@src/billing/config";
 import { TYPE_REGISTRY } from "@src/billing/providers/type-registry.provider";
 import { MANAGED_MASTER_WALLET } from "@src/billing/providers/wallet.provider";
-import { Wallet } from "@src/billing/services";
+import type { Wallet } from "@src/billing/services";
+import { apiNodeUrl } from "@src/utils/constants";
 
-import { DbTestingService } from "@test/services/db-testing.service";
 import { WalletTestingService } from "@test/services/wallet-testing.service";
 
 jest.setTimeout(30000);
@@ -24,15 +25,25 @@ describe("Tx Sign", () => {
   const registry = container.resolve<Registry>(TYPE_REGISTRY);
   const walletService = new WalletTestingService(app);
   const masterWallet = container.resolve<Wallet>(MANAGED_MASTER_WALLET);
-  const dbService = container.resolve(DbTestingService);
 
   afterEach(async () => {
-    await dbService.cleanAll();
+    nock.cleanAll();
   });
 
   describe("POST /v1/tx", () => {
     it("should create a deployment for a user", async () => {
       const { user, token, wallet } = await walletService.createUserAndWallet();
+      nock(apiNodeUrl, { allowUnmocked: true })
+        .get(
+          `/akash/deployment/v1beta3/deployments/list?filters.owner=${wallet.address}&pagination.offset=0&pagination.limit=1&pagination.count_total=true&pagination.reverse=false`
+        )
+        .reply(200, {
+          deployments: [],
+          pagination: {
+            total: 1
+          }
+        });
+
       const res = await app.request("/v1/tx", {
         method: "POST",
         body: await createMessagePayload(user.id, wallet.address),

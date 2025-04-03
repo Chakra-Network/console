@@ -1,4 +1,5 @@
 "use client";
+import type { ChangeEventHandler } from "react";
 import { useEffect, useState } from "react";
 import { MdSearchOff } from "react-icons/md";
 import { Button, buttonVariants, Spinner } from "@akashnetwork/ui/components";
@@ -9,12 +10,13 @@ import { FilterList, Xmark } from "iconoir-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { LinkTo } from "@src/components/shared/LinkTo";
-import { TemplateOutputSummaryWithCategory } from "@src/queries/useTemplateQuery";
+import type { TemplateOutputSummaryWithCategory } from "@src/queries/useTemplateQuery";
+import { useTemplates } from "@src/queries/useTemplateQuery";
 import { domainName, UrlService } from "@src/utils/urlUtils";
-import { useTemplates } from "../../context/TemplatesProvider";
 import Layout from "../layout/Layout";
 import { CustomNextSeo } from "../shared/CustomNextSeo";
 import { Title } from "../shared/Title";
+import type { Props as MobileTemplatesFilterProps } from "./MobileTemplatesFilter";
 import { MobileTemplatesFilter } from "./MobileTemplatesFilter";
 import { TemplateBox } from "./TemplateBox";
 
@@ -68,7 +70,7 @@ export const TemplateGallery: React.FunctionComponent = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, templates]);
 
-  const onSearchChange = event => {
+  const onSearchChange: ChangeEventHandler<HTMLInputElement> = event => {
     const searchValue = event.target.value;
     setSearchTerms(searchValue);
 
@@ -82,7 +84,7 @@ export const TemplateGallery: React.FunctionComponent = () => {
     }
   };
 
-  const onCategoryClick = categoryTitle => {
+  const onCategoryClick: MobileTemplatesFilterProps["onCategoryClick"] = categoryTitle => {
     setSelectedCategoryTitle(categoryTitle);
 
     if (isMobileSearchOpen) {

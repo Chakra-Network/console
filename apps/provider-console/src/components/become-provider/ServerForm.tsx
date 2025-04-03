@@ -26,15 +26,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtom } from "jotai/react";
 import { z } from "zod";
 
-import { useControlMachine } from "@src/context/ControlMachineProvider";
+import { useControlMachine } from "@src/context/ControlMachineProvider"; // eslint-disable-line import-x/no-cycle
 import { useWallet } from "@src/context/WalletProvider";
 import providerProcessStore from "@src/store/providerProcessStore";
-import { ControlMachineWithAddress } from "@src/types/controlMachine";
+import type { ControlMachineWithAddress } from "@src/types/controlMachine";
 import restClient from "@src/utils/restClient";
 import { ResetProviderForm } from "./ResetProviderProcess";
 
+// IPv4 validation regex pattern
+const ipv4Pattern = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
 const baseSchema = z.object({
-  hostname: z.string().min(2, { message: "IP must be at least 2 characters." }).max(30, { message: "IP must not be longer than 30 characters." }),
+  hostname: z.string().refine(val => ipv4Pattern.test(val), {
+    message: "Please enter a valid IPv4 address"
+  }),
   port: z.number().optional(),
   username: z.string(),
   saveInformation: z.boolean().optional()
@@ -228,7 +233,7 @@ export const ServerForm: React.FC<ServerFormProps> = ({ currentServerNumber, onC
   };
 
   const getDescription = () => {
-    if (editMode) return "Enter the required details for your control machine";
+    if (editMode) return "Provider Console need to connect to log into your control node, in order to make any configuration changes to your provider";
     if (isControlPlane) {
       return "Configure access for your control plane node that manages cluster operations";
     }
@@ -259,8 +264,9 @@ export const ServerForm: React.FC<ServerFormProps> = ({ currentServerNumber, onC
                         {currentServerNumber !== 0 && "Private IP"}
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Input your IP" {...field} />
+                        <Input placeholder="Enter a valid IPv4 address" {...field} />
                       </FormControl>
+                      <FormDescription>Must be a valid IPv4 address</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -292,11 +298,11 @@ export const ServerForm: React.FC<ServerFormProps> = ({ currentServerNumber, onC
                 <FormField
                   control={form.control}
                   name="username"
-                  render={({ field }) => (
+                  render={() => (
                     <FormItem className="flex flex-col space-y-2">
                       <FormLabel>SSH Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="Input your SSH username" {...field} />
+                        <Input value="root" disabled readOnly />
                       </FormControl>
                       <FormDescription>The username must be &quot;root&quot; for proper setup.</FormDescription>
                       <FormMessage />

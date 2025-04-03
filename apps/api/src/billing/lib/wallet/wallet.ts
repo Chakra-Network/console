@@ -1,7 +1,8 @@
 import { stringToPath } from "@cosmjs/crypto";
-import { DirectSecp256k1HdWallet, OfflineDirectSigner } from "@cosmjs/proto-signing";
-import { DirectSecp256k1HdWalletOptions } from "@cosmjs/proto-signing/build/directsecp256k1hdwallet";
-import { SignDoc } from "cosmjs-types/cosmos/tx/v1beta1/tx";
+import type { OfflineDirectSigner } from "@cosmjs/proto-signing";
+import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
+import type { DirectSecp256k1HdWalletOptions } from "@cosmjs/proto-signing/build/directsecp256k1hdwallet";
+import type { SignDoc } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 
 export class Wallet implements OfflineDirectSigner {
   private readonly PREFIX = "akash";
@@ -10,8 +11,12 @@ export class Wallet implements OfflineDirectSigner {
 
   private readonly instanceAsPromised: Promise<DirectSecp256k1HdWallet>;
 
-  constructor(mnemonic: string, index?: number) {
-    this.instanceAsPromised = DirectSecp256k1HdWallet.fromMnemonic(mnemonic, this.getInstanceOptions(index));
+  constructor(mnemonic?: string, index?: number) {
+    if (typeof mnemonic === "undefined") {
+      this.instanceAsPromised = DirectSecp256k1HdWallet.generate(24, this.getInstanceOptions(index));
+    } else {
+      this.instanceAsPromised = DirectSecp256k1HdWallet.fromMnemonic(mnemonic, this.getInstanceOptions(index));
+    }
   }
 
   private getInstanceOptions(index?: number): Partial<DirectSecp256k1HdWalletOptions> {
@@ -36,5 +41,9 @@ export class Wallet implements OfflineDirectSigner {
   async getFirstAddress() {
     const accounts = await this.getAccounts();
     return accounts[0].address;
+  }
+
+  async getMnemonic() {
+    return (await this.instanceAsPromised).mnemonic;
   }
 }

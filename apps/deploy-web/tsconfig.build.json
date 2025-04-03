@@ -4,14 +4,15 @@
     "baseUrl": ".",
     "moduleResolution": "Bundler",
     "paths": {
-      "@src/*": ["./src/*"]
+      "@src/*": ["./src/*"],
+      "@tests/*": ["./tests/*"]
     },
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "strictNullChecks": true
+    "strict": true
   },
   "extends": "@akashnetwork/dev-config/tsconfig.base-next.json"
 }

@@ -1,4 +1,5 @@
 "use client";
+import type { ChangeEventHandler } from "react";
 import { useEffect, useState } from "react";
 import {
   Button,
@@ -24,7 +25,7 @@ import { useWallet } from "@src/context/WalletProvider";
 import { useAllLeases } from "@src/queries/useLeaseQuery";
 import { useNetworkCapacity, useProviderList } from "@src/queries/useProvidersQuery";
 import networkStore from "@src/store/networkStore";
-import { ClientProviderList } from "@src/types/provider";
+import type { ClientProviderList } from "@src/types/provider";
 import { domainName, UrlService } from "@src/utils/urlUtils";
 import Layout from "../layout/Layout";
 import { CustomNextSeo } from "../shared/CustomNextSeo";
@@ -159,13 +160,13 @@ export const ProviderList: React.FunctionComponent = () => {
     setIsFilteringAudited(value);
   };
 
-  const onSearchChange = event => {
+  const onSearchChange: ChangeEventHandler<HTMLInputElement> = event => {
     const value = event.target.value;
     setSearch(value);
     setPageIndex(0);
   };
 
-  const handleSortChange = value => {
+  const handleSortChange = (value: string) => {
     router.replace(UrlService.providers(value), { scroll: false });
   };
 

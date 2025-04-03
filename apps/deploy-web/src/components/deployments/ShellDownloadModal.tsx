@@ -3,11 +3,19 @@ import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { Alert, Form, FormField, FormInput, Popup } from "@akashnetwork/ui/components";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { event } from "nextjs-google-analytics";
 import { z } from "zod";
 
 import { useBackgroundTask } from "@src/context/BackgroundTaskProvider";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
+import type { ProviderInfo } from "@src/hooks/useProviderWebsocket";
+import { analyticsService } from "@src/services/analytics/analytics.service";
+import type { LeaseDto } from "@src/types/deployment";
+
+type Props = {
+  selectedLease: LeaseDto;
+  onCloseClick: () => void;
+  selectedService: string;
+  providerInfo: ProviderInfo;
+};
 
 const formSchema = z.object({
   filePath: z
@@ -20,10 +28,12 @@ const formSchema = z.object({
     })
 });
 
-export const ShellDownloadModal = ({ selectedLease, onCloseClick, selectedService, providerInfo }) => {
+type FormData = z.infer<typeof formSchema>;
+
+export const ShellDownloadModal = ({ selectedLease, onCloseClick, selectedService, providerInfo }: Props) => {
   const formRef = useRef<HTMLFormElement | null>(null);
   const { downloadFileFromShell } = useBackgroundTask();
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     defaultValues: {
       filePath: ""
     },
@@ -35,18 +45,18 @@ export const ShellDownloadModal = ({ selectedLease, onCloseClick, selectedServic
     formState: { errors }
   } = form;
 
-  const onSubmit = async ({ filePath }) => {
-    downloadFileFromShell(providerInfo.hostUri, selectedLease.dseq, selectedLease.gseq, selectedLease.oseq, selectedService, filePath);
+  const onSubmit = async ({ filePath }: FormData) => {
+    downloadFileFromShell(providerInfo, selectedLease.dseq, selectedLease.gseq, selectedLease.oseq, selectedService, filePath);
 
-    event(AnalyticsEvents.DOWNLOADED_SHELL_FILE, {
-      category: AnalyticsCategory.DEPLOYMENTS,
+    analyticsService.track("downloaded_shell_file", {
+      category: "deployments",
       label: "Download file from shell"
     });
 
     onCloseClick();
   };
 
-  const onDownloadClick = event => {
+  const onDownloadClick = (event: React.MouseEvent) => {
     event.preventDefault();
     formRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
   };

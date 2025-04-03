@@ -1,15 +1,16 @@
-import { QueryKey, useQuery, UseQueryOptions } from "react-query";
+import type { QueryKey, UseQueryOptions } from "react-query";
+import { useQuery } from "react-query";
 import { AuthzHttpService } from "@akashnetwork/http-sdk";
 import axios from "axios";
 
 import { browserEnvConfig } from "@src/config/browser-env.config";
 import { UAKT_DENOM } from "@src/config/denom.config";
 import { getUsdcDenom } from "@src/hooks/useDenom";
-import { Balances } from "@src/types";
-import { RestApiBalancesResponseType } from "@src/types";
-import { RpcDeployment } from "@src/types/deployment";
+import type { Balances } from "@src/types";
+import type { RestApiBalancesResponseType } from "@src/types";
+import type { RpcDeployment } from "@src/types/deployment";
 import { ApiUrlService, loadWithPagination } from "@src/utils/apiUtils";
-import { deploymentToDto } from "@src/utils/deploymentDetailUtils";
+import { deploymentToDto } from "@src/utils/deploymentDetailUtils"; // eslint-disable-line import-x/no-cycle
 import { useSettings } from "../context/SettingsProvider";
 import { QueryKeys } from "./queryKeys";
 
@@ -60,9 +61,9 @@ async function getBalances(apiEndpoint: string, address?: string): Promise<Balan
   };
 }
 
-export function useBalances(address?: string, options?: Omit<UseQueryOptions<Balances, Error, any, QueryKey>, "queryKey" | "queryFn">) {
+export function useBalances(address?: string, options?: Omit<UseQueryOptions<Balances | undefined>, "queryKey" | "queryFn">) {
   const { settings } = useSettings();
-  return useQuery(QueryKeys.getBalancesKey(address), () => getBalances(settings.apiEndpoint, address), {
+  return useQuery(QueryKeys.getBalancesKey(address) as QueryKey, () => getBalances(settings.apiEndpoint, address), {
     enabled: !!address,
     ...options
   });

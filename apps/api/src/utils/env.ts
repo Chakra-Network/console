@@ -5,10 +5,7 @@ export const env = z
     CORS_WEBSITE_URLS: z.string().optional(),
     NODE_ENV: z.string().optional(),
     HEALTHCHECKS_ENABLED: z.string().optional(),
-    AKASH_DATABASE_CS: z.string().optional(),
-    AKASH_TESTNET_DATABASE_CS: z.string().optional(),
-    AKASH_SANDBOX_DATABASE_CS: z.string().optional(),
-    USER_DATABASE_CS: z.string().optional(),
+    CHAIN_INDEXER_POSTGRES_DB_URI: z.string(),
     NETWORK: z.string().default("mainnet"),
     REST_API_NODE_URL: z.string().optional(),
     SERVER_ORIGIN: z.string().optional().default("http://localhost:3080"),
@@ -22,6 +19,7 @@ export const env = z
       .number()
       .optional()
       .default(3 * 60),
-    NODE_API_BASE_PATH: z.string().optional().default("https://raw.githubusercontent.com/akash-network")
+    NODE_API_BASE_PATH: z.string().optional().default("https://raw.githubusercontent.com/akash-network"),
+    GPU_BOT_WALLET_MNEMONIC: z.string().optional()
   })
   .parse(process.env);

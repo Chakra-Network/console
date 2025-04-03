@@ -1,7 +1,8 @@
-import axios, { AxiosResponse } from "axios";
+import type { AxiosResponse } from "axios";
+import axios from "axios";
 import { URLSearchParams } from "url";
 
-import { GitProviderTokens } from "@src/types/remotedeploy";
+import type { GitProviderTokens } from "@src/types/remotedeploy";
 
 interface Tokens {
   access_token: string;
@@ -36,7 +37,7 @@ class BitbucketAuth {
         accessToken: access_token,
         refreshToken: refresh_token
       };
-    } catch (error) {
+    } catch (error: any) {
       throw new Error(error);
     }
   }
@@ -58,7 +59,7 @@ class BitbucketAuth {
         accessToken: access_token,
         refreshToken: refresh_token
       };
-    } catch (error) {
+    } catch (error: any) {
       throw new Error(error);
     }
   }

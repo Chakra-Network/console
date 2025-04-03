@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Alert, Button, CustomTooltip, Snackbar, Spinner } from "@akashnetwork/ui/components";
 import { InfoCircle, WarningCircle } from "iconoir-react";
 import yaml from "js-yaml";
-import { event } from "nextjs-google-analytics";
 import { useSnackbar } from "notistack";
 
 import { DynamicMonacoEditor } from "@src/components/shared/DynamicMonacoEditor";
@@ -11,13 +10,13 @@ import { LinearLoadingSkeleton } from "@src/components/shared/LinearLoadingSkele
 import { LinkTo } from "@src/components/shared/LinkTo";
 import ViewPanel from "@src/components/shared/ViewPanel";
 import { useCertificate } from "@src/context/CertificateProvider";
-import { LocalCert } from "@src/context/CertificateProvider/CertificateProviderContext";
 import { useSettings } from "@src/context/SettingsProvider";
 import { useWallet } from "@src/context/WalletProvider";
 import { useProviderList } from "@src/queries/useProvidersQuery";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
-import { DeploymentDto, LeaseDto } from "@src/types/deployment";
-import { ApiProviderList } from "@src/types/provider";
+import { analyticsService } from "@src/services/analytics/analytics.service";
+import networkStore from "@src/store/networkStore";
+import type { DeploymentDto, LeaseDto } from "@src/types/deployment";
+import type { ApiProviderList } from "@src/types/provider";
 import { deploymentData } from "@src/utils/deploymentData";
 import { getDeploymentLocalData, saveDeploymentManifest } from "@src/utils/deploymentLocalDataUtils";
 import { sendManifestToProvider } from "@src/utils/deploymentUtils";
@@ -87,7 +86,7 @@ export const ManifestUpdate: React.FunctionComponent<Props> = ({
         await deploymentData.NewDeploymentData(settings.apiEndpoint, yamlStr, dseq, address);
 
         setParsingError(null);
-      } catch (err) {
+      } catch (err: any) {
         if (err.name === "YAMLException" || err.name === "CustomValidationError") {
           setParsingError(err.message);
         } else {
@@ -108,23 +107,28 @@ export const ManifestUpdate: React.FunctionComponent<Props> = ({
     };
   }, [editedManifest, deployment.dseq, settings.apiEndpoint, address]);
 
-  function handleTextChange(value) {
-    onManifestChange(value);
+  function handleTextChange(value: string | undefined) {
+    onManifestChange(value || "");
 
     if (deploymentVersion) {
       setDeploymentVersion(null);
     }
   }
 
-  function handleUpdateDocClick(ev) {
+  function handleUpdateDocClick(ev: React.MouseEvent) {
     ev.preventDefault();
 
     window.open("https://akash.network/docs/deployments/akash-cli/installation/#update-the-deployment", "_blank");
   }
 
+  const chainNetwork = networkStore.useSelectedNetworkId();
   async function sendManifest(providerInfo: ApiProviderList, manifest: any) {
     try {
-      return await sendManifestToProvider(providerInfo, manifest, deployment.dseq, localCert as LocalCert);
+      return await sendManifestToProvider(providerInfo, manifest, {
+        dseq: deployment.dseq,
+        localCert,
+        chainNetwork
+      });
     } catch (err) {
       enqueueSnackbar(<ManifestErrorSnackbar err={err} />, { variant: "error", autoHideDuration: null });
       throw err;
@@ -167,8 +171,8 @@ export const ManifestUpdate: React.FunctionComponent<Props> = ({
           await sendManifest(providerInfo as ApiProviderList, mani);
         }
 
-        event(AnalyticsEvents.UPDATE_DEPLOYMENT, {
-          category: AnalyticsCategory.DEPLOYMENTS,
+        analyticsService.track("update_deployment", {
+          category: "deployments",
           label: "Update deployment"
         });
 

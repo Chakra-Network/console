@@ -1,0 +1,34 @@
+name: Indexer CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-indexer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - uses: ./.github/actions/local-dependencies
+        id: local_deps
+        with:
+          app: indexer
+
+      # Check for changes
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            local_deps: &local_deps ${{ steps.local_deps.outputs.deps_json }}
+            indexer:
+              - 'apps/indexer/**'
+              - *local_deps
+
+      - name: Build the Docker image
+        if: steps.filter.outputs.indexer == 'true'
+        run: packages/docker/script/dc.sh build indexer

@@ -6,10 +6,10 @@ import { container } from "tsyringe";
 
 import { app } from "@src/app";
 import { UserWalletRepository } from "@src/billing/repositories";
-import { ApiPgDatabase, POSTGRES_DB, resolveTable } from "@src/core";
+import type { ApiPgDatabase } from "@src/core";
+import { POSTGRES_DB, resolveTable } from "@src/core";
 import { getCurrentUserId } from "@src/middlewares/userMiddleware";
 
-import { DbTestingService } from "@test/services/db-testing.service";
 import { WalletTestingService } from "@test/services/wallet-testing.service";
 
 jest.mock("../../src/middlewares/userMiddleware.ts", () => ({
@@ -59,11 +59,6 @@ describe("User Init", () => {
     };
 
     (getCurrentUserId as jest.Mock).mockReturnValue(auth0Payload.userId);
-  });
-  const dbService = container.resolve(DbTestingService);
-
-  afterEach(async () => {
-    await dbService.cleanAll();
   });
 
   describe("POST /user/tokenInfo", () => {

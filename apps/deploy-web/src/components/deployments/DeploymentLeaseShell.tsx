@@ -6,14 +6,13 @@ import { OpenInWindow } from "iconoir-react";
 import Link from "next/link";
 
 import ViewPanel from "@src/components/shared/ViewPanel";
-import { browserEnvConfig } from "@src/config/browser-env.config";
 import { useCertificate } from "@src/context/CertificateProvider";
-import { useCustomWebSocket } from "@src/hooks/useCustomWebSocket";
+import { useProviderWebsocket } from "@src/hooks/useProviderWebsocket";
 import { XTerm } from "@src/lib/XTerm";
-import { XTermRefType } from "@src/lib/XTerm/XTerm";
+import type { XTermRefType } from "@src/lib/XTerm/XTerm";
 import { useLeaseStatus } from "@src/queries/useLeaseQuery";
 import { useProviderList } from "@src/queries/useProvidersQuery";
-import { LeaseDto } from "@src/types/deployment";
+import type { LeaseDto } from "@src/types/deployment";
 import { LeaseShellCode } from "@src/types/shell";
 import { UrlService } from "@src/utils/urlUtils";
 import { LeaseSelect } from "./LeaseSelect";
@@ -42,21 +41,17 @@ export const DeploymentLeaseShell: React.FunctionComponent<Props> = ({ leases })
     data: leaseStatus,
     refetch: getLeaseStatus,
     isFetching: isLoadingStatus
-  } = useLeaseStatus(providerInfo?.hostUri || "", selectedLease as LeaseDto, {
+  } = useLeaseStatus(providerInfo, selectedLease as LeaseDto, {
     enabled: false
   });
   const currentUrl = useRef<string | null>(null);
   const terminalRef = useRef<XTermRefType>(null);
-  const { sendJsonMessage } = useCustomWebSocket(browserEnvConfig.NEXT_PUBLIC_PROVIDER_PROXY_URL_WS, {
+  const { sendJsonMessage } = useProviderWebsocket(providerInfo, {
+    setupPingPong: true,
     onOpen: () => {
       console.log("opened");
     },
-    onMessage: onCommandResponseReceived,
-    onError: error => console.error("error", error),
-    shouldReconnect: closeEvent => {
-      console.log(closeEvent);
-      return true;
-    }
+    onMessage: onCommandResponseReceived
   });
 
   useEffect(() => {
@@ -85,7 +80,7 @@ export const DeploymentLeaseShell: React.FunctionComponent<Props> = ({ leases })
   useEffect(() => {
     if (!canSetConnection || !providerInfo || !isLocalCertMatching || !selectedLease || !selectedService || isConnectionEstablished) return;
 
-    const url = `${providerInfo.hostUri}/lease/${selectedLease.dseq}/${selectedLease.gseq}/${
+    const url = `/lease/${selectedLease.dseq}/${selectedLease.gseq}/${
       selectedLease.oseq
     }/shell?stdin=1&tty=1&podIndex=0&cmd0=${encodeURIComponent("/bin/sh")}&service=${selectedService}`;
     setIsLoadingData(true);
@@ -94,9 +89,7 @@ export const DeploymentLeaseShell: React.FunctionComponent<Props> = ({ leases })
 
     sendJsonMessage({
       type: "websocket",
-      url: url,
-      certPem: localCert?.certPem,
-      keyPem: localCert?.keyPem
+      url: url
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [providerInfo, isLocalCertMatching, selectedLease, selectedService, localCert?.certPem, localCert?.keyPem, isConnectionEstablished]);
@@ -179,7 +172,7 @@ export const DeploymentLeaseShell: React.FunctionComponent<Props> = ({ leases })
 
       sendJsonMessage({
         type: "websocket",
-        url: currentUrl.current,
+        url: currentUrl.current || "",
         data: data.toString()
       });
     },
@@ -192,7 +185,7 @@ export const DeploymentLeaseShell: React.FunctionComponent<Props> = ({ leases })
 
       sendJsonMessage({
         type: "websocket",
-        url: currentUrl.current,
+        url: currentUrl.current || "",
         data: data.toString()
       });
     },
@@ -214,7 +207,7 @@ export const DeploymentLeaseShell: React.FunctionComponent<Props> = ({ leases })
     }
   }
 
-  const onSelectedServiceChange = value => {
+  const onSelectedServiceChange = (value: string) => {
     setSelectedService(value);
 
     if (value !== selectedService) {
@@ -237,7 +230,7 @@ export const DeploymentLeaseShell: React.FunctionComponent<Props> = ({ leases })
 
   return (
     <div>
-      {isShowingDownloadModal && (
+      {isShowingDownloadModal && selectedLease && providerInfo && selectedService && (
         <ShellDownloadModal onCloseClick={onCloseDownloadClick} selectedLease={selectedLease} providerInfo={providerInfo} selectedService={selectedService} />
       )}
 
@@ -247,7 +240,7 @@ export const DeploymentLeaseShell: React.FunctionComponent<Props> = ({ leases })
             <>
               <div className="flex h-[56px] items-center space-x-4 p-2">
                 <div className="flex items-center">
-                  {(leases?.length || 0) > 1 && <LeaseSelect leases={leases} defaultValue={selectedLease.id} onSelectedChange={handleLeaseChange} />}
+                  {(leases?.length || 0) > 1 && <LeaseSelect leases={leases || []} defaultValue={selectedLease.id} onSelectedChange={handleLeaseChange} />}
 
                   {services?.length > 0 && selectedService && (
                     <div className={cn({ ["ml-2"]: (leases?.length || 0) > 1 })}>

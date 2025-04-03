@@ -1,7 +1,7 @@
 import Long from "long";
 
 import networkStore from "@src/store/networkStore";
-import { BidDto } from "@src/types/deployment";
+import type { BidDto } from "@src/types/deployment";
 import { BasicAllowance, MsgGrantAllowance, MsgRevoke, MsgRevokeAllowance } from "./proto/grant";
 import { protoTypes } from "./proto";
 
@@ -85,7 +85,7 @@ export class TransactionMessageData {
     return message;
   }
 
-  static getCreateDeploymentMsg(deploymentData) {
+  static getCreateDeploymentMsg(deploymentData: Record<string, any>) {
     const message = {
       typeUrl: TransactionMessageData.Types.MSG_CREATE_DEPLOYMENT,
       value: {
@@ -100,7 +100,7 @@ export class TransactionMessageData {
     return message;
   }
 
-  static getUpdateDeploymentMsg(deploymentData) {
+  static getUpdateDeploymentMsg(deploymentData: Record<string, any>) {
     const message = {
       typeUrl: TransactionMessageData.Types.MSG_UPDATE_DEPLOYMENT,
       value: {

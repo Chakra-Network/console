@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 
 import { LabelValue } from "../../../LabelValue";
@@ -7,7 +8,7 @@ import { AKTAmount } from "@/components/AKTAmount";
 import { DynamicReactJson } from "@/components/DynamicJsonView";
 import { coinsToAmount } from "@/lib/mathHelpers";
 import { UrlService } from "@/lib/urlUtils";
-import { TransactionMessage } from "@/types";
+import type { TransactionMessage } from "@/types";
 
 type TxMessageProps = {
   message: TransactionMessage;

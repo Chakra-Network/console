@@ -5,9 +5,9 @@ import { Drawer, DrawerContent } from "@akashnetwork/ui/components";
 import { cn } from "@akashnetwork/ui/utils";
 import { useAtom } from "jotai";
 
-import { ServerForm } from "@src/components/become-provider/ServerForm";
+import { ServerForm } from "@src/components/become-provider/ServerForm"; // eslint-disable-line import-x/no-cycle
 import controlMachineStore from "@src/store/controlMachineStore";
-import { ControlMachineWithAddress } from "@src/types/controlMachine";
+import type { ControlMachineWithAddress } from "@src/types/controlMachine";
 import restClient from "@src/utils/restClient";
 import { useWallet } from "../WalletProvider";
 
@@ -20,6 +20,7 @@ type ContextType = {
   setControlMachine: (controlMachine: ControlMachineWithAddress) => void;
   openControlMachineDrawer: () => void;
   controlMachineLoading: boolean;
+  disconnectControlMachine: () => void;
 };
 
 const ControlMachineContext = React.createContext<ContextType>({} as ContextType);
@@ -33,6 +34,7 @@ export function ControlMachineProvider({ children }: Props) {
 
   useEffect(() => {
     if (isWalletArbitrarySigned || isProvider) {
+      setActiveControlMachine(null);
       const controlMachine = controlMachines.find(machine => machine.address === address);
 
       if (!controlMachine) {
@@ -47,7 +49,8 @@ export function ControlMachineProvider({ children }: Props) {
             hostname: controlMachine.access.hostname,
             port: controlMachine.access.port,
             username: controlMachine.access.username,
-            password: controlMachine.access.password
+            password: controlMachine.access.password,
+            passphrase: controlMachine.access.passphrase
           };
           const isControlMachineConnected = await restClient.post(`/verify/control-machine`, request);
           if (isControlMachineConnected) {
@@ -59,6 +62,8 @@ export function ControlMachineProvider({ children }: Props) {
           setControlMachineLoading(false);
         }
       })();
+    } else if (!address) {
+      setActiveControlMachine(null);
     }
   }, [isWalletArbitrarySigned, address, controlMachines, isProvider]);
 
@@ -80,8 +85,23 @@ export function ControlMachineProvider({ children }: Props) {
     setControlMachineDrawerOpen(true);
   }
 
+  function disconnectControlMachine() {
+    if (activeControlMachine && address) {
+      setControlMachines(prev => prev.filter(machine => machine.address !== address));
+    }
+    setActiveControlMachine(null);
+  }
+
   return (
-    <ControlMachineContext.Provider value={{ activeControlMachine, setControlMachine, openControlMachineDrawer, controlMachineLoading }}>
+    <ControlMachineContext.Provider
+      value={{
+        activeControlMachine,
+        setControlMachine,
+        openControlMachineDrawer,
+        controlMachineLoading,
+        disconnectControlMachine
+      }}
+    >
       <>
         {children}
         <Drawer open={controlMachineDrawerOpen} onOpenChange={setControlMachineDrawerOpen}>

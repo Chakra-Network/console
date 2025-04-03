@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useWallet } from "@src/context/WalletProvider";
 import { useAllLeases } from "@src/queries/useLeaseQuery";
 import { useProviderDetail, useProviderStatus } from "@src/queries/useProvidersQuery";
-import { LeaseDto } from "@src/types/deployment";
-import { ClientProviderDetailWithStatus } from "@src/types/provider";
+import type { LeaseDto } from "@src/types/deployment";
+import type { ApiProviderList, ClientProviderDetailWithStatus } from "@src/types/provider";
 import { domainName, UrlService } from "@src/utils/urlUtils";
 import Layout from "../layout/Layout";
 import { CustomNextSeo } from "../shared/CustomNextSeo";
@@ -19,26 +19,35 @@ type Props = {
 export const LeaseListContainer: React.FunctionComponent<Props> = ({ owner }) => {
   const [provider, setProvider] = useState<Partial<ClientProviderDetailWithStatus> | null>(null);
   const [filteredLeases, setFilteredLeases] = useState<Array<LeaseDto> | null>(null);
-  const { isLoading: isLoadingProvider, refetch: getProviderDetail } = useProviderDetail(owner, {
+  const {
+    data: providerDetail,
+    isLoading: isLoadingProvider,
+    refetch: getProviderDetail
+  } = useProviderDetail(owner, {
     enabled: false,
-    retry: false,
-    onSuccess: _providerDetail => {
-      setProvider(provider => (provider ? { ...provider, ..._providerDetail } : _providerDetail));
-    }
+    retry: false
   });
+  useEffect(() => {
+    if (providerDetail) {
+      setProvider(provider => (provider ? { ...provider, ...providerDetail } : providerDetail));
+    }
+  }, [providerDetail]);
+
   const { address } = useWallet();
   const { data: leases, isFetching: isLoadingLeases, refetch: getLeases } = useAllLeases(address, { enabled: false });
   const {
     data: providerStatus,
     isLoading: isLoadingStatus,
     refetch: getProviderStatus
-  } = useProviderStatus(provider?.hostUri || "", {
+  } = useProviderStatus(provider as ApiProviderList, {
     enabled: false,
-    retry: false,
-    onSuccess: () => {
+    retry: false
+  });
+  useEffect(() => {
+    if (providerStatus) {
       setProvider(provider => (provider ? { ...provider, ...providerStatus } : (providerStatus as ClientProviderDetailWithStatus)));
     }
-  });
+  }, [providerStatus]);
 
   useEffect(() => {
     refresh();

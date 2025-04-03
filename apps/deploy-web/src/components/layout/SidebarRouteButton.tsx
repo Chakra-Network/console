@@ -1,11 +1,12 @@
 "use client";
-import React, { ReactNode } from "react";
-import { buttonVariants } from "@akashnetwork/ui/components";
+import type { ReactNode } from "react";
+import React from "react";
+import { Badge, buttonVariants } from "@akashnetwork/ui/components";
 import { cn } from "@akashnetwork/ui/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { ISidebarRoute } from "@src/types";
+import type { ISidebarRoute } from "@src/types";
 import { UrlService } from "@src/utils/urlUtils";
 
 type Props = {
@@ -44,6 +45,7 @@ export const SidebarRouteButton: React.FunctionComponent<Props> = ({ route, clas
         </span>
       )}
       {isNavOpen && <span className="mb-1 ml-4 mt-1 min-w-0 flex-auto whitespace-nowrap">{route.title}</span>}
+      {route.isNew && <Badge className="absolute right-3 top-1/2 h-4 -translate-y-1/2 pl-1 pr-1 text-[.5rem] leading-3">New</Badge>}
     </>
   );
 

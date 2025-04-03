@@ -1,10 +1,29 @@
 import yaml from "js-yaml";
 
-import { ExposeType, ProfileGpuModelType, ServiceType } from "@src/types";
+import type { ExposeType, ProfileGpuModelType, ServiceType } from "@src/types";
 import { defaultHttpOptions } from "./data";
 
+export const buildCommand = (command: string) => {
+  if (command.trim() === "sh -c") {
+    return ["sh", "-c"];
+  }
+
+  const lines = command.split("\n");
+
+  if (lines.length > 1 || command.startsWith("sh -c")) {
+    const commandWithoutEmptyLines =
+      lines
+        .map(line => line.trim())
+        .filter(Boolean)
+        .join("\n") + "\n";
+    return ["sh", "-c", commandWithoutEmptyLines.replace(/^sh -c\s*/, "")];
+  }
+
+  return command;
+};
+
 export const generateSdl = (services: ServiceType[], region?: string) => {
-  const sdl = { version: "2.0", services: {}, profiles: { compute: {}, placement: {} }, deployment: {} };
+  const sdl: Record<string, any> = { version: "2.0", services: {}, profiles: { compute: {}, placement: {} }, deployment: {} };
 
   services.forEach(service => {
     sdl.services[service.title] = {
@@ -15,7 +34,7 @@ export const generateSdl = (services: ServiceType[], region?: string) => {
       // Expose
       expose: service.expose.map(e => {
         // Port
-        const _expose = { port: e.port };
+        const _expose: Record<string, any> = { port: e.port };
 
         // As
         if (e.as) {
@@ -61,8 +80,8 @@ export const generateSdl = (services: ServiceType[], region?: string) => {
 
     // Command
     const trimmedCommand = service.command?.command?.trim();
-    if ((trimmedCommand?.length || 0) > 0) {
-      sdl.services[service.title].command = trimmedCommand?.split(" ").filter(x => x);
+    if (trimmedCommand) {
+      sdl.services[service.title].command = buildCommand(trimmedCommand);
       sdl.services[service.title].args = [service.command?.arg?.trim()];
     }
 
@@ -82,7 +101,7 @@ export const generateSdl = (services: ServiceType[], region?: string) => {
         },
         storage: [
           {
-            size: `${service.profile.storage}${service.profile.storageUnit}`
+            size: `${service.profile.storage[0].size}${service.profile.storage[0].unit}`
           }
         ]
       }
@@ -98,12 +117,13 @@ export const generateSdl = (services: ServiceType[], region?: string) => {
       };
 
       // Group models by vendor
-      const vendors = service.profile.gpuModels?.reduce((group, model) => {
-        const { vendor } = model;
-        group[vendor] = group[vendor] ?? [];
-        group[vendor].push(model);
-        return group;
-      }, {}) as { [key: string]: ProfileGpuModelType[] };
+      const vendors =
+        service.profile.gpuModels?.reduce<Record<string, ProfileGpuModelType[]>>((group, model) => {
+          const { vendor } = model;
+          group[vendor] = group[vendor] ?? [];
+          group[vendor].push(model);
+          return group;
+        }, {}) || {};
 
       for (const [vendor, models] of Object.entries(vendors)) {
         const mappedModels = models
@@ -133,23 +153,27 @@ export const generateSdl = (services: ServiceType[], region?: string) => {
     }
 
     // Persistent Storage
-    if (service.profile.hasPersistentStorage) {
+    if (service.profile.storage.length > 1) {
       sdl.services[service.title].params = {
-        storage: {
-          [service.profile.persistentStorageParam?.name as string]: {
-            mount: service.profile.persistentStorageParam?.mount,
-            readOnly: !!service.profile.persistentStorageParam?.readOnly
-          }
-        }
+        storage: {}
       };
 
-      sdl.profiles.compute[service.title].resources.storage.push({
-        name: service.profile.persistentStorageParam?.name,
-        size: `${service.profile.persistentStorage}${service.profile.persistentStorageUnit}`,
-        attributes: {
-          persistent: true,
-          class: service.profile.persistentStorageParam?.type
+      service.profile.storage.slice(1).forEach(storage => {
+        if (storage.name) {
+          sdl.services[service.title].params.storage[storage.name] = {
+            mount: storage.mount,
+            readOnly: !!storage.isReadOnly
+          };
         }
+
+        sdl.profiles.compute[service.title].resources.storage.push({
+          name: storage.name,
+          size: `${storage.size}${storage.unit}`,
+          attributes: {
+            persistent: storage.isPersistent,
+            class: storage.type
+          }
+        });
       });
     }
 
@@ -175,7 +199,10 @@ export const generateSdl = (services: ServiceType[], region?: string) => {
 
     // Attributes
     if ((service.placement.attributes?.length || 0) > 0) {
-      sdl.profiles.placement[service.placement.name].attributes = service.placement.attributes?.reduce((acc, curr) => ((acc[curr.key] = curr.value), acc), {});
+      sdl.profiles.placement[service.placement.name].attributes = service.placement.attributes?.reduce<Record<string, string>>(
+        (acc, curr) => ((acc[curr.key] = curr.value), acc),
+        {}
+      );
     }
 
     // Regions
@@ -191,7 +218,7 @@ export const generateSdl = (services: ServiceType[], region?: string) => {
       sdl["endpoints"] = {};
 
       service.expose
-        .filter(exp => exp.ipName)
+        .filter((exp): exp is ExposeType & { ipName: string } => !!exp.ipName)
         .forEach(exp => {
           sdl["endpoints"][exp.ipName] = {
             kind: "ip"

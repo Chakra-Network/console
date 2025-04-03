@@ -1,6 +1,7 @@
 "use client";
-import { FC, useCallback, useEffect, useState } from "react";
-import { TemplateOutput } from "@akashnetwork/http-sdk/src/template/template-http.service";
+import type { FC } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { TemplateOutput } from "@akashnetwork/http-sdk/src/template/template-http.service";
 import { useAtomValue } from "jotai";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -8,10 +9,10 @@ import { USER_TEMPLATE_CODE } from "@src/config/deploy.config";
 import { CI_CD_TEMPLATE_ID } from "@src/config/remote-deploy.config";
 import { useLocalNotes } from "@src/context/LocalNoteProvider";
 import { useSdlBuilder } from "@src/context/SdlBuilderProvider";
-import { useTemplates } from "@src/context/TemplatesProvider";
+import { useTemplates } from "@src/queries/useTemplateQuery";
 import { isCiCdImageInYaml } from "@src/services/remote-deploy/remote-deployment-controller.service";
 import sdlStore from "@src/store/sdlStore";
-import { TemplateCreation } from "@src/types";
+import type { TemplateCreation } from "@src/types";
 import { RouteStep } from "@src/types/route-steps.type";
 import { hardcodedTemplates } from "@src/utils/templates";
 import { UrlService } from "@src/utils/urlUtils";
@@ -31,7 +32,7 @@ export const NewDeploymentContainer: FC<NewDeploymentContainerProps> = ({ templa
   const { isLoading: isLoadingTemplates, templates } = useTemplates();
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateCreation | null>(null);
-  const [editedManifest, setEditedManifest] = useState<string | null>(null);
+  const [editedManifest, setEditedManifest] = useState("");
   const deploySdl = useAtomValue(sdlStore.deploySdl);
   const { getDeploymentData } = useLocalNotes();
   const router = useRouter();

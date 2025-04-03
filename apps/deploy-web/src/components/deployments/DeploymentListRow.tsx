@@ -1,5 +1,6 @@
 "use client";
-import { ReactNode, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Badge,
   Button,
@@ -16,28 +17,31 @@ import ClickAwayListener from "@mui/material/ClickAwayListener";
 import differenceInCalendarDays from "date-fns/differenceInCalendarDays";
 import formatDistanceToNow from "date-fns/formatDistanceToNow";
 import isValid from "date-fns/isValid";
-import { Edit, InfoCircle, MoreHoriz, NavArrowRight, Plus, Upload, WarningCircle, WarningTriangle, XmarkSquare } from "iconoir-react";
+import { CalendarArrowDown, Coins, Edit, MoreHoriz, NavArrowRight, Plus, Upload, WarningTriangle, XmarkSquare } from "iconoir-react";
+import { keyBy } from "lodash";
 import { useRouter } from "next/navigation";
-import { event } from "nextjs-google-analytics";
 
+import { useCertificate } from "@src/context/CertificateProvider";
 import { useWallet } from "@src/context/WalletProvider";
 import { useManagedDeploymentConfirm } from "@src/hooks/useManagedDeploymentConfirm";
-import { getShortText } from "@src/hooks/useShortText";
 import { useDenomData } from "@src/hooks/useWalletBalance";
-import { useAllLeases } from "@src/queries/useLeaseQuery";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
-import { NamedDeploymentDto } from "@src/types/deployment";
-import { ApiProviderList } from "@src/types/provider";
+import { useAllLeases, useLeaseStatus } from "@src/queries/useLeaseQuery";
+import { analyticsService } from "@src/services/analytics/analytics.service";
+import type { NamedDeploymentDto } from "@src/types/deployment";
+import type { ApiProviderList } from "@src/types/provider";
 import { udenomToDenom } from "@src/utils/mathHelpers";
 import { getAvgCostPerMonth, getTimeLeft, useRealTimeLeft } from "@src/utils/priceUtils";
 import { TransactionMessageData } from "@src/utils/TransactionMessageData";
 import { UrlService } from "@src/utils/urlUtils";
 import { useLocalNotes } from "../../context/LocalNoteProvider";
+import { CopyTextToClipboardButton } from "../copy-text-to-clipboard-button/CopyTextToClipboardButton";
 import { CustomDropdownLinkItem } from "../shared/CustomDropdownLinkItem";
 import { PricePerMonth } from "../shared/PricePerMonth";
 import { PriceValue } from "../shared/PriceValue";
 import { SpecDetailList } from "../shared/SpecDetailList";
-import { DeploymentDepositModal, DeploymentDepositModalProps } from "./DeploymentDepositModal";
+import { DeploymentName } from "./DeploymentName/DeploymentName";
+import type { DeploymentDepositModalProps } from "./DeploymentDepositModal";
+import { DeploymentDepositModal } from "./DeploymentDepositModal";
 import { LeaseChip } from "./LeaseChip";
 
 type Props = {
@@ -65,67 +69,34 @@ export const DeploymentListRow: React.FunctionComponent<Props> = ({ deployment, 
   const deploymentCost = hasLeases ? filteredLeases?.reduce((prev, current) => prev + parseFloat(current.price.amount), 0) : 0;
   const timeLeft = getTimeLeft(deploymentCost || 0, deployment.escrowBalance);
   const realTimeLeft = useRealTimeLeft(deploymentCost || 0, deployment.escrowBalance, parseFloat(deployment.escrowAccount.settled_at), deployment.createdAt);
-  const deploymentName = deployment.name ? (
-    <>
-      {deployment.name.length > 20 ? (
-        <CustomTooltip
-          title={
-            <>
-              <div>{deployment.name}</div>
-              <small>{deployment.dseq}</small>
-            </>
-          }
-        >
-          <span className="text-sm">
-            <strong>{getShortText(deployment.name, 15)}</strong>
-            <span className="inline text-xs">
-              &nbsp;-&nbsp;<small>{getShortText(deployment.dseq, 15)}</small>
-            </span>
-          </span>
-        </CustomTooltip>
-      ) : (
-        <CustomTooltip
-          title={
-            <>
-              <div>{deployment.name}</div>
-              <small>{deployment.dseq}</small>
-            </>
-          }
-        >
-          <span className="text-sm">
-            <strong>{deployment.name}</strong>
-            <span className="inline text-xs">
-              &nbsp;-&nbsp;<small>{getShortText(deployment.dseq, 15)}</small>
-            </span>
-          </span>
-        </CustomTooltip>
-      )}
-    </>
-  ) : (
-    <span className="inline text-sm">
-      <small>{deployment.dseq}</small>
-    </span>
-  );
   const showTimeLeftWarning = differenceInCalendarDays(timeLeft, new Date()) < 7;
   const escrowBalance = isActive && hasActiveLeases ? realTimeLeft?.escrow : deployment.escrowBalance;
+  const isRunningOutOfFunds = escrowBalance && escrowBalance <= 0;
   const amountSpent = isActive && hasActiveLeases ? realTimeLeft?.amountSpent : parseFloat(deployment.transferred.amount);
   const isValidTimeLeft = isActive && hasActiveLeases && isValid(realTimeLeft?.timeLeft);
   const avgCost = udenomToDenom(getAvgCostPerMonth(deploymentCost || 0));
   const storageDeploymentData = getDeploymentData(deployment?.dseq);
   const denomData = useDenomData(deployment.escrowAccount.balance.denom);
   const { closeDeploymentConfirm } = useManagedDeploymentConfirm();
+  const providersByOwner = useMemo(() => keyBy(providers, p => p.owner), [providers]);
+  const lease = filteredLeases?.find(lease => !!(lease?.provider && providersByOwner[lease.provider]));
+  const provider = providersByOwner[lease?.provider || ""];
+  const { localCert } = useCertificate();
+  const { data: leaseStatus } = useLeaseStatus(provider, lease, { enabled: !!(provider && lease && localCert) });
 
-  function viewDeployment() {
-    router.push(UrlService.deploymentDetails(deployment.dseq));
-  }
+  const viewDeployment = useCallback(
+    (event: React.MouseEvent) => {
+      if ((event.target as Element).closest(`a, button, [role="button"]`)) return;
+      router.push(UrlService.deploymentDetails(deployment.dseq));
+    },
+    [router, deployment.dseq]
+  );
 
-  function handleMenuClick(ev) {
-    ev.stopPropagation();
+  function handleMenuClick() {
     setOpen(true);
   }
 
-  const handleMenuClose = (event?) => {
-    event?.stopPropagation();
+  const handleMenuClose = () => {
     setOpen(false);
   };
 
@@ -137,8 +108,8 @@ export const DeploymentListRow: React.FunctionComponent<Props> = ({ deployment, 
     if (response) {
       refreshDeployments();
 
-      event(AnalyticsEvents.DEPLOYMENT_DEPOSIT, {
-        category: AnalyticsCategory.DEPLOYMENTS,
+      analyticsService.track("deployment_deposit", {
+        category: "deployments",
         label: "Deposit to deployment from list"
       });
     }
@@ -162,8 +133,8 @@ export const DeploymentListRow: React.FunctionComponent<Props> = ({ deployment, 
 
       refreshDeployments();
 
-      event(AnalyticsEvents.CLOSE_DEPLOYMENT, {
-        category: AnalyticsCategory.DEPLOYMENTS,
+      analyticsService.track("close_deployment", {
+        category: "deployments",
         label: "Close deployment from list"
       });
     }
@@ -193,7 +164,7 @@ export const DeploymentListRow: React.FunctionComponent<Props> = ({ deployment, 
 
   return (
     <>
-      <TableRow className="cursor-pointer hover:bg-muted-foreground/10 [&>td]:p-2" onClick={() => viewDeployment()}>
+      <TableRow className="cursor-pointer hover:bg-muted-foreground/10 [&>td]:p-2" role="link" onClick={viewDeployment}>
         <TableCell>
           <div className="flex items-center justify-center">
             <SpecDetailList
@@ -205,33 +176,37 @@ export const DeploymentListRow: React.FunctionComponent<Props> = ({ deployment, 
             />
           </div>
         </TableCell>
-        <TableCell className="max-w-[100px] text-center">{deploymentName}</TableCell>
-        <TableCell className="text-center">
-          {isActive && isValidTimeLeft && realTimeLeft && (
-            <div className="inline-flex items-center space-x-2">
-              <span>~{formatDistanceToNow(realTimeLeft?.timeLeft)}</span>
-              {showTimeLeftWarning && (
-                <CustomTooltip
-                  title={
-                    <>
-                      Your deployment will close soon,{" "}
-                      <a href="#" onClick={showDepositModal}>
-                        Add Funds
-                      </a>{" "}
-                      to keep it running.
-                    </>
-                  }
-                >
-                  <WarningTriangle className="text-xs text-warning" />
-                </CustomTooltip>
-              )}
-            </div>
-          )}
+        <TableCell className="max-w-[100px] text-center">
+          <DeploymentName deployment={deployment} deploymentServices={leaseStatus?.services} providerHostUri={provider?.hostUri} />
         </TableCell>
         <TableCell className="text-center">
-          {isActive && !!escrowBalanceInDenom && !!escrowBalance && (
-            <div className="inline-flex">
-              <PriceValue denom={deployment.escrowAccount.balance.denom} value={escrowBalanceInDenom} />
+          <div className="flex items-center justify-center gap-x-1">
+            <span>{deployment.dseq || "N/A"}</span>
+            <CopyTextToClipboardButton value={deployment.dseq} />
+          </div>
+        </TableCell>
+        <TableCell className="text-center">
+          <div className="inline-flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            {isActive && !!deploymentCost && (
+              <CustomTooltip
+                disabled={isManagedWallet}
+                title={
+                  <span>
+                    {avgCost} {denomData?.label} / month
+                  </span>
+                }
+              >
+                <div className={`flex items-center ${isManagedWallet ? "" : "cursor-help"}`}>
+                  <CalendarArrowDown className="mr-2 text-xs" />
+                  <PricePerMonth
+                    denom={deployment.escrowAccount.balance.denom}
+                    perBlockValue={udenomToDenom(deploymentCost, 10)}
+                    className="whitespace-nowrap"
+                  />
+                </div>
+              </CustomTooltip>
+            )}
+            {isActive && !!escrowBalanceInDenom && !!escrowBalance && (
               <CustomTooltip
                 title={
                   <div className="text-left">
@@ -262,36 +237,35 @@ export const DeploymentListRow: React.FunctionComponent<Props> = ({ deployment, 
                   </div>
                 }
               >
-                <InfoCircle className="ml-2 text-xs text-muted-foreground" />
+                <div className="inline-flex cursor-help">
+                  <Coins className="mr-2 text-xs" />
+                  <PriceValue denom={deployment.escrowAccount.balance.denom} value={escrowBalanceInDenom} />
+                </div>
               </CustomTooltip>
-
-              {escrowBalance <= 0 && (
-                <CustomTooltip title="Your deployment is out of funds and can be closed by your provider at any time now. You can add funds to keep active.">
-                  <WarningCircle className="ml-2 text-destructive-foreground" />
-                </CustomTooltip>
-              )}
-            </div>
-          )}
-        </TableCell>
-        <TableCell className="text-center">
-          {isActive && !!deploymentCost && (
-            <div className="ml-4 inline-flex">
-              <div className="flex items-center">
-                <PricePerMonth denom={deployment.escrowAccount.balance.denom} perBlockValue={udenomToDenom(deploymentCost, 10)} className="whitespace-nowrap" />
-
-                {!isManagedWallet && (
-                  <CustomTooltip
-                    title={
-                      <span>
-                        {avgCost} {denomData?.label} / month
-                      </span>
-                    }
-                  >
-                    <InfoCircle className="ml-2 text-xs text-muted-foreground" />
-                  </CustomTooltip>
-                )}
+            )}
+          </div>
+          {isActive && ((isValidTimeLeft && realTimeLeft) || isRunningOutOfFunds) && (
+            <CustomTooltip
+              disabled={!(showTimeLeftWarning || isRunningOutOfFunds)}
+              title={
+                <>
+                  Your deployment will close soon,{" "}
+                  <a href="#" onClick={showDepositModal}>
+                    Add Funds
+                  </a>{" "}
+                  to keep it running.
+                </>
+              }
+            >
+              <div className={`inline-flex items-center space-x-2 text-xs ${showTimeLeftWarning || isRunningOutOfFunds ? "cursor-help text-warning" : ""}`}>
+                <span>
+                  {isRunningOutOfFunds
+                    ? `Your deployment is out of funds and can be closed by your provider at any time now. You can add funds to keep active.`
+                    : getTimeLeftText(realTimeLeft?.timeLeft)}
+                </span>
+                {showTimeLeftWarning && <WarningTriangle className="text-xs" />}
               </div>
-            </div>
+            </CustomTooltip>
           )}
         </TableCell>
 
@@ -377,3 +351,9 @@ export const DeploymentListRow: React.FunctionComponent<Props> = ({ deployment, 
     </>
   );
 };
+
+function getTimeLeftText(timeLeft?: Date) {
+  if (!timeLeft) return "";
+  const text = formatDistanceToNow(timeLeft);
+  return `will be active for ${text.startsWith("about") ? text : `about ${text}`}`;
+}

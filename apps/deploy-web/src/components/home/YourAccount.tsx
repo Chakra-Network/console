@@ -10,17 +10,17 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 
 import { TopUpAmountPicker } from "@src/components/top-up-amount-picker/TopUpAmountPicker";
-import { VerifiedLoginRequiredLink } from "@src/components/user/VerifiedLoginRequiredLink";
+import { AddFundsLink } from "@src/components/user/AddFundsLink";
 import { browserEnvConfig } from "@src/config/browser-env.config";
 import { UAKT_DENOM } from "@src/config/denom.config";
 import { usePricing } from "@src/context/PricingProvider";
 import { useWallet } from "@src/context/WalletProvider";
 import { useUsdcDenom } from "@src/hooks/useDenom";
 import useTailwind from "@src/hooks/useTailwind";
-import { WalletBalance } from "@src/hooks/useWalletBalance";
+import type { WalletBalance } from "@src/hooks/useWalletBalance";
 import sdlStore from "@src/store/sdlStore";
-import { DeploymentDto, LeaseDto } from "@src/types/deployment";
-import { ApiProviderList } from "@src/types/provider";
+import type { DeploymentDto, LeaseDto } from "@src/types/deployment";
+import type { ApiProviderList } from "@src/types/provider";
 import { customColors } from "@src/utils/colors";
 import { roundDecimal, udenomToDenom } from "@src/utils/mathHelpers";
 import { getAvgCostPerMonth, uaktToAKT } from "@src/utils/priceUtils";
@@ -57,7 +57,7 @@ export const YourAccount: React.FunctionComponent<Props> = ({ isLoadingBalances,
   const [, setDeploySdl] = useAtom(sdlStore.deploySdl);
   const { price, isLoaded } = usePricing();
 
-  const colors = {
+  const colors: Record<string, string> = {
     balance_akt: customColors.akashRed,
     balance_usdc: customColors.akashRed,
     deployment_akt: tw.theme.colors.green[600],
@@ -140,8 +140,8 @@ export const YourAccount: React.FunctionComponent<Props> = ({ isLoadingBalances,
     }
   }, [leases, providers, price, isLoaded]);
 
-  const _getColor = bar => getColor(bar.id, selectedDataId);
-  const getColor = (id, selectedId) => {
+  const _getColor = (bar: any) => getColor(bar.id, selectedDataId);
+  const getColor = (id: string, selectedId: string | null) => {
     if (!selectedId || id === selectedId) {
       return colors[id];
     } else {
@@ -180,8 +180,8 @@ export const YourAccount: React.FunctionComponent<Props> = ({ isLoadingBalances,
                 </p>
               </div>
 
-              {activeDeployments.length > 0 ? (
-                <>
+              {activeDeployments.length > 0 && (
+                <div className="flex flex-col gap-2">
                   <div className="mt-8">
                     <p className="mb-4 text-sm text-muted-foreground">Total resources leased</p>
 
@@ -222,23 +222,25 @@ export const YourAccount: React.FunctionComponent<Props> = ({ isLoadingBalances,
                       ))}
                     </div>
                   </div>
-                </>
-              ) : (
-                <Link href={UrlService.newDeployment()} className={cn("mr-2 mt-4", buttonVariants({ variant: "default" }))} onClick={onDeployClick}>
+                </div>
+              )}
+
+              <div className="mt-4 flex gap-2">
+                <Link href={UrlService.newDeployment()} className={cn(buttonVariants({ variant: "default" }))} onClick={onDeployClick}>
                   Deploy
                   <Rocket className="ml-4rotate-45 text-sm" />
                 </Link>
-              )}
-              {isManagedWallet && (
-                <>
-                  <TopUpAmountPicker className="mt-4 inline-flex flex-col" mdMode="hover">
-                    <VerifiedLoginRequiredLink className={cn(buttonVariants({ variant: "default" }))} href="/api/proxy/v1/checkout">
+                {isManagedWallet && (
+                  <>
+                    <AddFundsLink className={cn(buttonVariants({ variant: "default" }))} href="/api/proxy/v1/checkout">
                       Add Funds
                       <HandCard className="ml-4 rotate-45 text-sm" />
-                    </VerifiedLoginRequiredLink>
-                  </TopUpAmountPicker>
-                </>
-              )}
+                    </AddFundsLink>
+
+                    <TopUpAmountPicker variant="default" />
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="mt-4 flex basis-3/5 flex-col items-center md:mt-0 md:flex-row">

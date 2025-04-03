@@ -1,9 +1,10 @@
-import "reflect-metadata";
 import "@src/core/providers/sentry.provider";
+import "reflect-metadata";
 
 import { LoggerService } from "@akashnetwork/logging";
+import { HttpLoggerIntercepter } from "@akashnetwork/logging/hono";
 import { serve } from "@hono/node-server";
-import { Context, Hono, Next } from "hono";
+import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { container } from "tsyringe";
 
@@ -11,11 +12,18 @@ import { AuthInterceptor } from "@src/auth/services/auth.interceptor";
 import { config } from "@src/core/config";
 import { getSentry, sentryOptions } from "@src/core/providers/sentry.provider";
 import { HonoErrorHandlerService } from "@src/core/services/hono-error-handler/hono-error-handler.service";
-import { HttpLoggerService } from "@src/core/services/http-logger/http-logger.service";
 import { RequestContextInterceptor } from "@src/core/services/request-context-interceptor/request-context.interceptor";
-import { HonoInterceptor } from "@src/core/types/hono-interceptor.type";
+import type { HonoInterceptor } from "@src/core/types/hono-interceptor.type";
 import packageJson from "../package.json";
+import { apiKeysRouter } from "./auth/routes/api-keys/api-keys.router";
+import { bidsRouter } from "./bid/routes/bids/bids.router";
+import { certificateRouter } from "./certificate/routes/certificate.router";
 import { chainDb, syncUserSchema, userDb } from "./db/dbConnection";
+import { deploymentSettingRouter } from "./deployment/routes/deployment-setting/deployment-setting.router";
+import { deploymentsRouter } from "./deployment/routes/deployments/deployments.router";
+import { leasesRouter } from "./deployment/routes/leases/leases.router";
+import { featuresRouter } from "./features/routes/features/features.router";
+import { healthzRouter } from "./healthz/routes/healthz.router";
 import { clientInfoMiddleware } from "./middlewares/clientInfoMiddleware";
 import { apiRouter } from "./routers/apiRouter";
 import { dashboardRouter } from "./routers/dashboardRouter";
@@ -29,14 +37,14 @@ import { sendVerificationEmailRouter } from "./auth";
 import { checkoutRouter, getWalletListRouter, signAndBroadcastTxRouter, startTrialRouter, stripePricesRouter, stripeWebhook } from "./billing";
 import { Scheduler } from "./scheduler";
 import { createAnonymousUserRouter, getAnonymousUserRouter } from "./user";
-
 const appHono = new Hono();
 appHono.use(
   "/*",
   cors({
     allowMethods: ["GET", "HEAD", "PUT", "POST", "DELETE", "PATCH", "OPTIONS"],
     origin: env.CORS_WEBSITE_URLS?.split(",") || ["http://localhost:3000", "http://localhost:3001"],
-    credentials: true
+    credentials: true,
+    exposeHeaders: ["cf-mitigated"]
   })
 );
 
@@ -50,11 +58,11 @@ const scheduler = new Scheduler({
   }
 });
 
-appHono.use(container.resolve(HttpLoggerService).intercept());
+appHono.use(container.resolve(HttpLoggerIntercepter).intercept());
 appHono.use(container.resolve(RequestContextInterceptor).intercept());
 appHono.use(container.resolve<HonoInterceptor>(AuthInterceptor).intercept());
 appHono.use(clientInfoMiddleware);
-appHono.use("*", async (c: Context, next: Next) => {
+appHono.use("*", async (c, next) => {
   const { sentry } = await import("@hono/sentry");
   return sentry({
     ...sentryOptions,
@@ -82,6 +90,15 @@ appHono.route("/", stripePricesRouter);
 appHono.route("/", createAnonymousUserRouter);
 appHono.route("/", getAnonymousUserRouter);
 appHono.route("/", sendVerificationEmailRouter);
+appHono.route("/", deploymentSettingRouter);
+appHono.route("/", deploymentsRouter);
+appHono.route("/", leasesRouter);
+appHono.route("/", apiKeysRouter);
+appHono.route("/", bidsRouter);
+appHono.route("/", certificateRouter);
+appHono.route("/", featuresRouter);
+
+appHono.route("/", healthzRouter);
 
 appHono.get("/status", c => {
   const version = packageJson.version;

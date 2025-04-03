@@ -1,27 +1,87 @@
+import keyBy from "lodash/keyBy";
 import { singleton } from "tsyringe";
 
+import { UserWalletRepository } from "@src/billing/repositories";
 import { BlockHttpService } from "@src/chain/services/block-http/block-http.service";
-import { DeploymentConfig, InjectDeploymentConfig } from "@src/deployment/config/config.provider";
+import { AutoTopUpDeployment, DeploymentSettingRepository } from "@src/deployment/repositories/deployment-setting/deployment-setting.repository";
 import { DrainingDeploymentOutput, LeaseRepository } from "@src/deployment/repositories/lease/lease.repository";
 import { averageBlockCountInAnHour } from "@src/utils/constants";
+import { DeploymentConfigService } from "../deployment-config/deployment-config.service";
 
+export type DrainingDeployment = AutoTopUpDeployment & {
+  predictedClosedHeight: number;
+  blockRate: number;
+};
 @singleton()
 export class DrainingDeploymentService {
   constructor(
     private readonly blockHttpService: BlockHttpService,
     private readonly leaseRepository: LeaseRepository,
-    @InjectDeploymentConfig() private readonly config: DeploymentConfig
+    private readonly userWalletRepository: UserWalletRepository,
+    private readonly deploymentSettingRepository: DeploymentSettingRepository,
+    private readonly config: DeploymentConfigService
   ) {}
 
-  async findDeployments(owner: string, denom: string): Promise<DrainingDeploymentOutput[]> {
-    const currentHeight = await this.blockHttpService.getCurrentHeight();
-    const closureHeight = Math.floor(currentHeight + averageBlockCountInAnHour * this.config.AUTO_TOP_UP_JOB_INTERVAL_IN_H);
-    const denomAliased = denom === "uakt" ? denom : "uusdc";
+  async paginate(params: { limit: number }, cb: (page: DrainingDeployment[]) => Promise<void>) {
+    await this.deploymentSettingRepository.paginateAutoTopUpDeployments({ limit: params.limit }, async deploymentSettings => {
+      const currentHeight = await this.blockHttpService.getCurrentHeight();
+      const expectedClosureHeight = Math.floor(currentHeight + averageBlockCountInAnHour * 2 * this.config.get("AUTO_TOP_UP_JOB_INTERVAL_IN_H"));
 
-    return await this.leaseRepository.findDrainingLeases({ owner, closureHeight, denom: denomAliased });
+      const drainingDeployments = await this.leaseRepository.findManyByDseqAndOwner(
+        expectedClosureHeight,
+        deploymentSettings.map(deployment => ({ dseq: deployment.dseq, owner: deployment.address }))
+      );
+
+      if (drainingDeployments.length) {
+        const byDseqOwner = keyBy(drainingDeployments, ({ dseq, owner }) => `${dseq}-${owner}`);
+        const [active, missingIds] = deploymentSettings.reduce(
+          (acc, deploymentSetting) => {
+            const deployment = byDseqOwner[`${deploymentSetting.dseq}-${deploymentSetting.address}`];
+
+            if (!deployment) {
+              return acc;
+            }
+
+            if (deployment.closedHeight) {
+              acc[1].push(deploymentSetting.id);
+            } else {
+              acc[0].push({
+                ...deploymentSetting,
+                predictedClosedHeight: deployment?.predictedClosedHeight,
+                blockRate: deployment?.blockRate
+              });
+            }
+            return acc;
+          },
+          [[], []]
+        );
+
+        if (missingIds.length) {
+          await this.deploymentSettingRepository.updateManyById(missingIds, { closed: true });
+        }
+
+        await cb(active);
+      }
+    });
+  }
+
+  async calculateTopUpAmountForDseqAndUserId(dseq: string, userId: string): Promise<number> {
+    const userWallet = await this.userWalletRepository.findOneByUserId(userId);
+
+    if (!userWallet) {
+      return 0;
+    }
+
+    const deploymentSetting = await this.leaseRepository.findOneByDseqAndOwner(dseq, userWallet.address);
+
+    if (!deploymentSetting) {
+      return 0;
+    }
+
+    return this.calculateTopUpAmount(deploymentSetting);
   }
 
   async calculateTopUpAmount(deployment: Pick<DrainingDeploymentOutput, "blockRate">): Promise<number> {
-    return Math.floor(deployment.blockRate * (averageBlockCountInAnHour * 24 * this.config.AUTO_TOP_UP_DEPLOYMENT_INTERVAL_IN_DAYS));
+    return Math.floor(deployment.blockRate * (averageBlockCountInAnHour * this.config.get("AUTO_TOP_UP_DEPLOYMENT_INTERVAL_IN_H")));
   }
 }

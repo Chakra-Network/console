@@ -127,9 +127,9 @@ export class ApiUrlService {
 
 // TODO: implement proper pagination on clients
 //   Issue: https://github.com/akash-network/console/milestone/7
-export async function loadWithPagination<T>(baseUrl: string, dataKey: string, limit: number) {
-  let items = [];
-  let nextKey = null;
+export async function loadWithPagination<T>(baseUrl: string, dataKey: string, limit: number, httpClient = axios) {
+  let items: T[] = [];
+  let nextKey: string | null = null;
   // let callCount = 1;
   // let totalCount = null;
 
@@ -140,7 +140,7 @@ export async function loadWithPagination<T>(baseUrl: string, dataKey: string, li
       queryUrl += "&pagination.key=" + encodeURIComponent(nextKey);
     }
     // console.log(`Querying ${dataKey} [${callCount}] from : ${queryUrl}`);
-    const response = await axios.get(queryUrl);
+    const response = await httpClient.get(queryUrl);
     const data = response.data;
 
     // if (!nextKey) {

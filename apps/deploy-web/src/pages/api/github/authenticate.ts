@@ -1,4 +1,4 @@
-import { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 
 import { serverEnvConfig } from "@src/config/server-env.config";
 import GitHubAuth from "@src/services/auth/github.service";
@@ -20,7 +20,7 @@ export default async function exchangeGitHubCodeForTokenHandler(req: NextApiRequ
   try {
     const accessToken = await gitHubAuth.exchangeAuthorizationCodeForToken(code);
     res.status(200).json({ accessToken });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).send({
       error: "Something went wrong",
       message: error

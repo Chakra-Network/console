@@ -2,27 +2,28 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { TxOutput } from "@akashnetwork/http-sdk";
 import { Snackbar } from "@akashnetwork/ui/components";
-import { EncodeObject } from "@cosmjs/proto-signing";
+import type { EncodeObject } from "@cosmjs/proto-signing";
 import { useManager } from "@cosmos-kit/react";
 import axios from "axios";
 import { OpenNewWindow } from "iconoir-react";
 import { useAtom } from "jotai";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { event } from "nextjs-google-analytics";
-import { SnackbarKey, useSnackbar } from "notistack";
+import type { SnackbarKey } from "notistack";
+import { useSnackbar } from "notistack";
 
-import { LoadingState, TransactionModal } from "@src/components/layout/TransactionModal";
+import type { LoadingState } from "@src/components/layout/TransactionModal";
+import { TransactionModal } from "@src/components/layout/TransactionModal";
 import { browserEnvConfig } from "@src/config/browser-env.config";
-import { useAllowance } from "@src/hooks/useAllowance";
+import { useAllowance } from "@src/hooks/useAllowance"; // eslint-disable-line import-x/no-cycle
 import { useManagedWallet } from "@src/hooks/useManagedWallet";
 import { useUser } from "@src/hooks/useUser";
 import { useWhen } from "@src/hooks/useWhen";
 import { useBalances } from "@src/queries/useBalancesQuery";
+import { analyticsService } from "@src/services/analytics/analytics.service";
 import { txHttpService } from "@src/services/http/http-browser.service";
 import networkStore from "@src/store/networkStore";
 import walletStore from "@src/store/walletStore";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
 import { UrlService } from "@src/utils/urlUtils";
 import { getStorageWallets, updateStorageManagedWallet, updateStorageWallets } from "@src/utils/walletUtils";
 import { useSelectedChain } from "../CustomChainProvider";
@@ -43,14 +44,14 @@ type ContextType = {
   walletName: string;
   isWalletConnected: boolean;
   isWalletLoaded: boolean;
-  connectWallet: () => Promise<void>;
   connectManagedWallet: () => void;
   logout: () => void;
-  signAndBroadcastTx: (msgs: EncodeObject[]) => Promise<any>;
+  signAndBroadcastTx: (msgs: EncodeObject[]) => Promise<boolean>;
   isManaged: boolean;
   isCustodial: boolean;
   isWalletLoading: boolean;
   isTrialing: boolean;
+  isOnboarding: boolean;
   creditAmount?: number;
   switchWalletType: () => void;
   hasManagedWallet: boolean;
@@ -66,7 +67,7 @@ const MESSAGE_STATES: Record<string, LoadingState> = {
   "/akash.deployment.v1beta3.MsgDepositDeployment": "depositingDeployment"
 };
 
-export const WalletProvider = ({ children }) => {
+export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isWalletLoaded, setIsWalletLoaded] = useState<boolean>(true);
   const [loadingState, setLoadingState] = useState<LoadingState | undefined>(undefined);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
@@ -92,6 +93,24 @@ export const WalletProvider = ({ children }) => {
   const isLoading = (selectedWalletType === "managed" && isManagedWalletLoading) || (selectedWalletType === "custodial" && userWallet.isWalletConnecting);
 
   useWhen(walletAddress, loadWallet);
+
+  useWhen(isWalletConnected && selectedWalletType, () => {
+    if (selectedWalletType === "custodial") {
+      analyticsService.track(
+        "connect_wallet",
+        {
+          category: "wallet",
+          label: "Connect wallet"
+        },
+        "GA"
+      );
+      analyticsService.identify({ custodialWallet: true });
+      analyticsService.trackSwitch("connect_wallet", "custodial", "Amplitude");
+    } else if (selectedWalletType === "managed") {
+      analyticsService.identify({ managedWallet: true });
+      analyticsService.trackSwitch("connect_wallet", "managed", "Amplitude");
+    }
+  });
 
   useEffect(() => {
     if (!settings.apiEndpoint || !settings.rpcEndpoint) return;
@@ -133,8 +152,8 @@ export const WalletProvider = ({ children }) => {
   function logout() {
     userWallet.disconnect();
 
-    event(AnalyticsEvents.DISCONNECT_WALLET, {
-      category: AnalyticsCategory.WALLET,
+    analyticsService.track("disconnect_wallet", {
+      category: "wallet",
       label: "Disconnect wallet"
     });
 
@@ -143,18 +162,6 @@ export const WalletProvider = ({ children }) => {
     if (managedWallet) {
       setSelectedWalletType("managed");
     }
-  }
-
-  async function connectWallet() {
-    console.log("Connecting wallet with CosmosKit...");
-    await userWallet.connect();
-
-    await loadWallet();
-
-    event(AnalyticsEvents.CONNECT_WALLET, {
-      category: AnalyticsCategory.WALLET,
-      label: "Connect wallet"
-    });
   }
 
   async function loadWallet(): Promise<void> {
@@ -221,13 +228,13 @@ export const WalletProvider = ({ children }) => {
         showTransactionSnackbar("Transaction success!", "", txResult.transactionHash, "success");
       }
 
-      event(AnalyticsEvents.SUCCESSFUL_TX, {
+      analyticsService.track("successful_tx", {
         category: "transactions",
         label: "Successful transaction"
       });
 
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
 
       if (axios.isAxiosError(err) && err.response?.status !== 500) {
@@ -250,7 +257,7 @@ export const WalletProvider = ({ children }) => {
               const codeSpace = match[2];
 
               if (codeSpace === "sdk" && code in ERROR_MESSAGES) {
-                errorMsg = ERROR_MESSAGES[code];
+                errorMsg = ERROR_MESSAGES[code as keyof typeof ERROR_MESSAGES];
               }
             }
 
@@ -263,7 +270,7 @@ export const WalletProvider = ({ children }) => {
         }
 
         if (!errorMsg.includes("Request rejected")) {
-          event(AnalyticsEvents.FAILED_TX, {
+          analyticsService.track("failed_tx", {
             category: "transactions",
             label: "Failed transaction"
           });
@@ -309,7 +316,6 @@ export const WalletProvider = ({ children }) => {
         walletName: username as string,
         isWalletConnected: isWalletConnected,
         isWalletLoaded: isWalletLoaded,
-        connectWallet,
         connectManagedWallet,
         logout,
         signAndBroadcastTx,
@@ -317,6 +323,7 @@ export const WalletProvider = ({ children }) => {
         isCustodial: !isManaged,
         isWalletLoading: isLoading,
         isTrialing: isManaged && !!managedWallet?.isTrialing,
+        isOnboarding: !!user?.userId && isManaged && !!managedWallet?.isTrialing,
         creditAmount: isManaged ? managedWallet?.creditAmount : 0,
         hasManagedWallet: !!managedWallet,
         switchWalletType
@@ -334,7 +341,7 @@ export function useWallet() {
   return { ...React.useContext(WalletProviderContext) };
 }
 
-const TransactionSnackbarContent = ({ snackMessage, transactionHash }) => {
+const TransactionSnackbarContent: React.FC<{ snackMessage: string; transactionHash: string }> = ({ snackMessage, transactionHash }) => {
   const selectedNetworkId = networkStore.useSelectedNetworkId();
   const txUrl = transactionHash && `${browserEnvConfig.NEXT_PUBLIC_STATS_APP_URL}/transactions/${transactionHash}?network=${selectedNetworkId}`;
 

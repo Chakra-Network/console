@@ -1,4 +1,4 @@
-import { Attribute } from "@akashnetwork/akash-api/akash/base/v1beta3";
+import type { Attribute } from "@akashnetwork/akash-api/akash/base/v1beta3";
 import yaml from "js-yaml";
 
 import { browserEnvConfig } from "@src/config/browser-env.config";
@@ -7,14 +7,15 @@ import type { DepositParams } from "@src/types/deployment";
 import { CustomValidationError, getCurrentHeight, getSdl, Manifest, ManifestVersion } from "./helpers";
 
 export const ENDPOINT_NAME_VALIDATION_REGEX = /^[a-z]+[-_\da-z]+$/;
-const TRIAL_ATTRIBUTE = "console/trials";
+export const TRIAL_ATTRIBUTE = "console/trials";
+export const TRIAL_REGISTERED_ATTRIBUTE = "console/trials-registered";
 const AUDITOR = "akash1365yvmc4s7awdyj3n2sav7xfx76adc6dnmlx63";
 
-export function getManifest(yamlJson, asString: boolean) {
+export function getManifest(yamlJson: any, asString: boolean) {
   return Manifest(yamlJson, "beta3", networkStore.selectedNetworkId, asString);
 }
 
-export async function getManifestVersion(yamlJson) {
+export async function getManifestVersion(yamlJson: any) {
   const version = await ManifestVersion(yamlJson, "beta3", networkStore.selectedNetworkId);
 
   return Buffer.from(version).toString("base64");
@@ -27,7 +28,7 @@ const getDenomFromSdl = (groups: any[]): string => {
   return denoms[0];
 };
 
-export function appendTrialAttribute(yamlStr: string) {
+export function appendTrialAttribute(yamlStr: string, attributeKey: string) {
   const sdl = getSdl(yamlStr, "beta3", networkStore.selectedNetworkId);
   const placementData = sdl.data?.profiles?.placement || {};
 
@@ -38,9 +39,9 @@ export function appendTrialAttribute(yamlStr: string) {
       value.attributes = Object.entries(value.attributes).map(([key, value]) => ({ key, value: value as string }));
     }
 
-    const hasTrialAttribute = value.attributes.find(attr => attr.key === TRIAL_ATTRIBUTE);
+    const hasTrialAttribute = value.attributes.find(attr => attr.key === attributeKey);
     if (!hasTrialAttribute) {
-      value.attributes.push({ key: TRIAL_ATTRIBUTE, value: "true" });
+      value.attributes.push({ key: attributeKey, value: "true" });
     }
 
     if (!value.signedBy?.anyOf || !value.signedBy?.allOf) {
@@ -62,7 +63,7 @@ export function appendTrialAttribute(yamlStr: string) {
       "!!null": "empty" // dump null as empty value
     },
     replacer: (key, value) => {
-      const isCurrentKeyProviderAttributes = key === "attributes" && Array.isArray(value) && value.some(attr => attr.key === TRIAL_ATTRIBUTE);
+      const isCurrentKeyProviderAttributes = key === "attributes" && Array.isArray(value) && value.some(attr => attr.key === attributeKey);
       if (isCurrentKeyProviderAttributes) {
         return mapProviderAttributes(value);
       }
@@ -76,7 +77,7 @@ ${result}`;
 
 // Attributes is a key value pair object, but we store it as an array of objects with key and value
 function mapProviderAttributes(attributes: Attribute[]) {
-  return attributes?.reduce((acc, curr) => ((acc[curr.key] = curr.value), acc), {});
+  return attributes?.reduce<Record<string, string>>((acc, curr) => ((acc[curr.key] = curr.value), acc), {});
 }
 
 export async function NewDeploymentData(
@@ -110,7 +111,7 @@ export async function NewDeploymentData(
       deposit: _deposit,
       depositor: depositorAddress || fromAddress
     };
-  } catch (e) {
+  } catch (e: any) {
     const error = new CustomValidationError(e.message);
     error.stack = e.stack;
     throw error;

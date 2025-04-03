@@ -1,31 +1,29 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { certificateManager } from "@akashnetwork/akashjs/build/certificates/certificate-manager";
 import { Alert, Button, Form, Spinner } from "@akashnetwork/ui/components";
-import { EncodeObject } from "@cosmjs/proto-signing";
+import type { EncodeObject } from "@cosmjs/proto-signing";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Rocket } from "iconoir-react";
 import { useAtom } from "jotai";
 import { useRouter, useSearchParams } from "next/navigation";
-import { event } from "nextjs-google-analytics";
 
 import { browserEnvConfig } from "@src/config/browser-env.config";
 import { useCertificate } from "@src/context/CertificateProvider";
-import { useChainParam } from "@src/context/ChainParamProvider";
 import { useSettings } from "@src/context/SettingsProvider";
 import { useWallet } from "@src/context/WalletProvider";
-import { useManagedDeploymentConfirm } from "@src/hooks/useManagedDeploymentConfirm";
 import { useManagedWalletDenom } from "@src/hooks/useManagedWalletDenom";
 import { useWhen } from "@src/hooks/useWhen";
 import { useGpuModels } from "@src/queries/useGpuQuery";
 import { useDepositParams } from "@src/queries/useSettings";
-import { TemplateOutputSummaryWithCategory } from "@src/queries/useTemplateQuery";
+import type { TemplateOutputSummaryWithCategory } from "@src/queries/useTemplateQuery";
+import { analyticsService } from "@src/services/analytics/analytics.service";
 import sdlStore from "@src/store/sdlStore";
-import { ProfileGpuModelType, RentGpusFormValuesSchema, RentGpusFormValuesType, ServiceType } from "@src/types";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
-import { DepositParams } from "@src/types/deployment";
-import { ProviderAttributeSchemaDetailValue } from "@src/types/providerAttributes";
+import type { ProfileGpuModelType, RentGpusFormValuesType, ServiceType } from "@src/types";
+import { RentGpusFormValuesSchema } from "@src/types";
+import type { DepositParams } from "@src/types/deployment";
+import type { ProviderAttributeSchemaDetailValue } from "@src/types/providerAttributes";
 import { RouteStep } from "@src/types/route-steps.type";
 import { deploymentData } from "@src/utils/deploymentData";
 import { saveDeploymentManifestAndName } from "@src/utils/deploymentLocalDataUtils";
@@ -41,12 +39,13 @@ import { LinkTo } from "../shared/LinkTo";
 import { PrerequisiteList } from "../shared/PrerequisiteList";
 import { AdvancedConfig } from "./AdvancedConfig";
 import { CpuFormControl } from "./CpuFormControl";
+import { DeploymentMinimumEscrowAlertText } from "./DeploymentMinimumEscrowAlertText";
+import { EphemeralStorageFormControl } from "./EphemeralStorageFormControl";
 import { FormPaper } from "./FormPaper";
 import { GpuFormControl } from "./GpuFormControl";
 import { ImageSelect } from "./ImageSelect";
 import { MemoryFormControl } from "./MemoryFormControl";
 import { RegionSelect } from "./RegionSelect";
-import { StorageFormControl } from "./StorageFormControl";
 import { TokenFormControl } from "./TokenFormControl";
 
 export const RentGpusForm: React.FunctionComponent = () => {
@@ -75,9 +74,7 @@ export const RentGpusForm: React.FunctionComponent = () => {
   const { address, signAndBroadcastTx, isManaged } = useWallet();
   const { loadValidCertificates, localCert, isLocalCertMatching, loadLocalCert, setSelectedCertificate } = useCertificate();
   const [sdlDenom, setSdlDenom] = useState("uakt");
-  const { minDeposit } = useChainParam();
   const router = useRouter();
-  const { createDeploymentConfirm } = useManagedDeploymentConfirm();
   const managedDenom = useManagedWalletDenom();
   const { data: depositParams } = useDepositParams();
   const defaultDeposit = depositParams || browserEnvConfig.NEXT_PUBLIC_DEFAULT_INITIAL_DEPOSIT;
@@ -158,7 +155,7 @@ export const RentGpusForm: React.FunctionComponent = () => {
       setError(null);
 
       return services;
-    } catch (err) {
+    } catch (err: any) {
       if (err.name === "YAMLException" || err.name === "CustomValidationError") {
         setError(err.message);
       } else if (err.name === "TemplateValidation") {
@@ -207,13 +204,7 @@ export const RentGpusForm: React.FunctionComponent = () => {
     setRentGpuSdl(data);
 
     if (isManaged) {
-      const isConfirmed = await createDeploymentConfirm(rentGpuSdl?.services as ServiceType[]);
-
-      if (!isConfirmed) {
-        return;
-      }
-
-      await handleCreateClick(defaultDeposit, browserEnvConfig.NEXT_PUBLIC_MASTER_WALLET_ADDRESS);
+      setIsDepositingDeployment(true);
     } else {
       setIsCheckingPrerequisites(true);
     }
@@ -265,7 +256,7 @@ export const RentGpusForm: React.FunctionComponent = () => {
           });
           const validCerts = await loadValidCertificates();
           loadLocalCert();
-          const currentCert = validCerts.find(x => x.parsed === _crtpem);
+          const currentCert = validCerts.find(x => x.parsed === _crtpem) || null;
           setSelectedCertificate(currentCert);
         }
 
@@ -275,18 +266,29 @@ export const RentGpusForm: React.FunctionComponent = () => {
         saveDeploymentManifestAndName(dd.deploymentId.dseq, sdl, dd.version, address, currentService.image);
         router.push(UrlService.newDeployment({ step: RouteStep.createLeases, dseq: dd.deploymentId.dseq }));
 
-        event(AnalyticsEvents.CREATE_GPU_DEPLOYMENT, {
-          category: AnalyticsCategory.DEPLOYMENTS,
+        analyticsService.track("create_gpu_deployment", {
+          category: "deployments",
           label: "Create deployment rent gpu form"
         });
       } else {
         setIsCreatingDeployment(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       setIsCreatingDeployment(false);
       setError(error.message);
     }
   }
+
+  const serviceIndex = 0;
+  const {
+    append: appendStorage,
+    remove: removeStorage,
+    fields: storages
+  } = useFieldArray({
+    control,
+    name: `services.${serviceIndex}.profile.storage` as any,
+    keyName: "id"
+  });
 
   return (
     <>
@@ -298,13 +300,15 @@ export const RentGpusForm: React.FunctionComponent = () => {
           infoText={
             <Alert className="mb-4" variant="default">
               <p className="text-sm text-muted-foreground">
-                To create a deployment, you need to have at least <b>{minDeposit.akt} AKT</b> or <b>{minDeposit.usdc} USDC</b> in an escrow account.{" "}
+                <DeploymentMinimumEscrowAlertText />
                 <LinkTo onClick={ev => handleDocClick(ev, "https://akash.network/docs/getting-started/intro-to-akash/bids-and-leases/#escrow-accounts")}>
                   <strong>Learn more.</strong>
                 </LinkTo>
               </p>
             </Alert>
           }
+          title="Confirm deployment creation?"
+          services={rentGpuSdl?.services}
         />
       )}
       {isCheckingPrerequisites && <PrerequisiteList onClose={() => setIsCheckingPrerequisites(false)} onContinue={onPrerequisiteContinue} />}
@@ -335,7 +339,7 @@ export const RentGpusForm: React.FunctionComponent = () => {
             </div>
 
             <div className="mt-4">
-              <StorageFormControl control={control as any} serviceIndex={0} />
+              <EphemeralStorageFormControl services={_services} control={control as any} serviceIndex={0} appendStorage={appendStorage} />
             </div>
 
             <div className="grid-col-2 mt-4 grid gap-2">
@@ -350,7 +354,14 @@ export const RentGpusForm: React.FunctionComponent = () => {
             </div>
           </FormPaper>
 
-          <AdvancedConfig control={control} currentService={currentService} />
+          <AdvancedConfig
+            control={control}
+            currentService={currentService}
+            storages={storages}
+            setValue={setValue}
+            appendStorage={appendStorage}
+            removeStorage={removeStorage}
+          />
 
           {error && (
             <Alert variant="destructive" className="mt-4">

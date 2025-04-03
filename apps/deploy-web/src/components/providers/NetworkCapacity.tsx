@@ -1,6 +1,7 @@
 "use client";
 import { useIntl } from "react-intl";
-import { ComputedDatum, PieTooltipProps, ResponsivePie } from "@nivo/pie";
+import type { PieSvgProps, PieTooltipProps } from "@nivo/pie";
+import { ResponsivePie } from "@nivo/pie";
 import { BasicTooltip } from "@nivo/tooltip";
 import { useTheme } from "next-themes";
 
@@ -8,7 +9,13 @@ import useTailwind from "@src/hooks/useTailwind";
 import { roundDecimal } from "@src/utils/mathHelpers";
 import { bytesToShrink } from "@src/utils/unitUtils";
 
-const getPieChartEntryColor = (datum: ComputedDatum<{ color: string }>) => datum.data.color;
+const getPieChartEntryColor: PieSvgProps<NetworkCapacityDatum>["colors"] = datum => datum.data.color;
+type NetworkCapacityDatum = {
+  id: string;
+  label: string;
+  value: number;
+  color: string;
+};
 
 export interface Props {
   activeCPU: number;
@@ -196,7 +203,7 @@ const NetworkCapacity: React.FunctionComponent<Props> = props => {
   );
 };
 
-const useData = (active: number, available: number) => {
+const useData = (active: number, available: number): NetworkCapacityDatum[] => {
   const { resolvedTheme } = useTheme();
   const tw = useTailwind();
 
@@ -216,7 +223,7 @@ const useData = (active: number, available: number) => {
   ];
 };
 
-function useStorageData(props: Props) {
+function useStorageData(props: Props): NetworkCapacityDatum[] {
   const { resolvedTheme } = useTheme();
   const tw = useTailwind();
 

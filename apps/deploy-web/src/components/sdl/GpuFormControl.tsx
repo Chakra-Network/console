@@ -1,6 +1,8 @@
 "use client";
-import { ReactNode } from "react";
-import { Control, Controller, useFieldArray, UseFormSetValue } from "react-hook-form";
+import type { ReactNode } from "react";
+import { useCallback, useMemo } from "react";
+import type { Control, UseFormSetValue } from "react-hook-form";
+import { Controller, useFieldArray } from "react-hook-form";
 import { MdSpeed } from "react-icons/md";
 import { Button, Checkbox, CustomTooltip, FormField, FormItem, FormMessage, Input, Slider, Spinner } from "@akashnetwork/ui/components";
 import { cn } from "@akashnetwork/ui/utils";
@@ -10,10 +12,13 @@ import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import { default as MuiSelect } from "@mui/material/Select";
 import { Bin, InfoCircle, Xmark } from "iconoir-react";
+import flow from "lodash/flow";
+import flatMap from "lodash/fp/flatMap";
+import keyBy from "lodash/fp/keyBy";
 
-import { RentGpusFormValuesType, SdlBuilderFormValuesType, ServiceType } from "@src/types";
-import { GpuVendor } from "@src/types/gpu";
-import { gpuVendors } from "@src/utils/akash/gpu";
+import type { RentGpusFormValuesType, SdlBuilderFormValuesType, ServiceType } from "@src/types";
+import type { GpuModel, GpuVendor } from "@src/types/gpu";
+import { gpuVendors as hardCodedGpuVendors } from "@src/utils/akash/gpu";
 import { validationConfig } from "@src/utils/akash/units";
 import { FormPaper } from "./FormPaper";
 
@@ -42,6 +47,25 @@ export const GpuFormControl: React.FunctionComponent<Props> = ({ gpuModels, cont
   const onAddGpuModel = () => {
     appendFormGpuModel({ vendor: "nvidia", name: "", memory: "", interface: "" });
   };
+
+  const gpuVendors = useMemo(() => {
+    return gpuModels
+      ? gpuModels.map((vendor, index) => {
+          return { id: index, value: vendor.name };
+        })
+      : hardCodedGpuVendors;
+  }, [gpuModels]);
+
+  const gpuModelsByName: Record<string, GpuModel> = useMemo(() => {
+    return flow([flatMap("models"), keyBy("name")])(gpuModels || []);
+  }, [gpuModels]);
+
+  const theOnlyForModelOrEmpty = useCallback(
+    (name: string, attribute: keyof GpuModel) => {
+      return gpuModelsByName[name][attribute].length === 1 ? gpuModelsByName[name][attribute][0] : "";
+    },
+    [gpuModelsByName]
+  );
 
   return (
     <FormPaper>
@@ -163,7 +187,12 @@ export const GpuFormControl: React.FunctionComponent<Props> = ({ gpuModels, cont
                           <MuiSelect
                             labelId="gpu-vendor-select-label"
                             value={field.value || ""}
-                            onChange={field.onChange}
+                            onChange={event => {
+                              field.onChange(event);
+                              setValue(`services.${serviceIndex}.profile.gpuModels.${formGpuIndex}.name`, "");
+                              setValue(`services.${serviceIndex}.profile.gpuModels.${formGpuIndex}.memory`, "");
+                              setValue(`services.${serviceIndex}.profile.gpuModels.${formGpuIndex}.interface`, "");
+                            }}
                             variant="outlined"
                             label="Vendor"
                             fullWidth
@@ -196,8 +225,14 @@ export const GpuFormControl: React.FunctionComponent<Props> = ({ gpuModels, cont
                                 value={field.value || ""}
                                 onChange={event => {
                                   field.onChange(event);
-                                  setValue(`services.${serviceIndex}.profile.gpuModels.${formGpuIndex}.memory`, "");
-                                  setValue(`services.${serviceIndex}.profile.gpuModels.${formGpuIndex}.interface`, "");
+                                  setValue(
+                                    `services.${serviceIndex}.profile.gpuModels.${formGpuIndex}.memory`,
+                                    theOnlyForModelOrEmpty(event.target.value, "memory")
+                                  );
+                                  setValue(
+                                    `services.${serviceIndex}.profile.gpuModels.${formGpuIndex}.interface`,
+                                    theOnlyForModelOrEmpty(event.target.value, "interface")
+                                  );
                                 }}
                                 variant="outlined"
                                 size="small"

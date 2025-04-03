@@ -1,7 +1,8 @@
+"use client";
 import { LabelValue } from "../../../LabelValue";
 
 import { AddressLink } from "@/components/AddressLink";
-import { TransactionMessage } from "@/types";
+import type { TransactionMessage } from "@/types";
 
 type TxMessageProps = {
   message: TransactionMessage;

@@ -3,12 +3,21 @@ import { useState } from "react";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
+import type { SelectChangeEvent } from "@mui/material/Select";
 import Select from "@mui/material/Select";
 
-export const LeaseSelect = ({ defaultValue, leases, onSelectedChange }) => {
+import type { LeaseDto } from "@src/types/deployment";
+
+type Props = {
+  defaultValue: string;
+  leases: Pick<LeaseDto, "id" | "gseq">[];
+  onSelectedChange: (value: string) => void;
+};
+
+export const LeaseSelect = ({ defaultValue, leases, onSelectedChange }: Props) => {
   const [selected, setSelected] = useState(defaultValue);
 
-  const handleChange = event => {
+  const handleChange = (event: SelectChangeEvent) => {
     const value = event.target.value;
 
     setSelected(value);

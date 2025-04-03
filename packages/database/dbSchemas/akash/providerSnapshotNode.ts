@@ -5,32 +5,82 @@ import { Required } from "../decorators/requiredDecorator";
 import { ProviderSnapshotNodeCPU } from "./providerSnapshotNodeCPU";
 import { ProviderSnapshotNodeGPU } from "./providerSnapshotNodeGPU";
 
+/**
+ * ProviderSnapshotNode model for Akash
+ *
+ * This is used to store the snapshot of a node at a given time.
+ */
 @Table({
   modelName: "providerSnapshotNode",
   indexes: [{ unique: false, fields: ["snapshotId"] }]
 })
 export class ProviderSnapshotNode extends Model {
-  @Required @PrimaryKey @Default(DataTypes.UUIDV4) @Column(DataTypes.UUID) id: string;
-  @Required @Column(DataTypes.UUID) snapshotId: string;
+  /**
+   * The ID of the snapshot node
+   */
+  @Required @PrimaryKey @Default(DataTypes.UUIDV4) @Column(DataTypes.UUID) id!: string;
+  /**
+   * The ID of the database snapshot that this node belongs to
+   */
+  @Required @Column(DataTypes.UUID) snapshotId!: string;
 
   // Stats
-  @Column name: string;
-  @Column(DataTypes.BIGINT) cpuAllocatable: number;
-  @Column(DataTypes.BIGINT) cpuAllocated: number;
+  /**
+   * The name of the node
+   */
+  @Column name!: string;
+  /**
+   * The amount of allocatable CPU the node has in thousands of vCPUs
+   * 1000 vCPUs = 1 CPU
+   */
+  @Column(DataTypes.BIGINT) cpuAllocatable!: number;
+  /**
+   * The amount of allocated CPU the node has in thousands of vCPUs
+   */
+  @Column(DataTypes.BIGINT) cpuAllocated!: number;
+  /**
+   * The amount of allocatable memory the node has in bytes
+   */
+  @Column(DataTypes.BIGINT) memoryAllocatable!: number;
+  /**
+   * The amount of allocated memory the node has in bytes
+   */
+  @Column(DataTypes.BIGINT) memoryAllocated!: number;
+  /**
+   * The amount of allocatable ephemeral storage the node has in bytes
+   */
+  @Column(DataTypes.BIGINT) ephemeralStorageAllocatable!: number;
+  /**
+   * The amount of allocated ephemeral storage the node has in bytes
+   */
+  @Column(DataTypes.BIGINT) ephemeralStorageAllocated!: number;
+  /**
+   * Whether the node has HDD storage capabilities
+   */
+  @Column capabilitiesStorageHDD!: boolean;
+  /**
+   * Whether the node has SSD storage capabilities
+   */
+  @Column capabilitiesStorageSSD!: boolean;
+  /**
+   * Whether the node has NVMe storage capabilities
+   */
+  @Column capabilitiesStorageNVME!: boolean;
+  /**
+   * The amount of allocatable GPU the node has
+   */
+  @Column(DataTypes.BIGINT) gpuAllocatable!: number;
+  /**
+   * The amount of allocated GPU the node has
+   */
+  @Column(DataTypes.BIGINT) gpuAllocated!: number;
 
-  @Column(DataTypes.BIGINT) memoryAllocatable: number;
-  @Column(DataTypes.BIGINT) memoryAllocated: number;
-
-  @Column(DataTypes.BIGINT) ephemeralStorageAllocatable: number;
-  @Column(DataTypes.BIGINT) ephemeralStorageAllocated: number;
-
-  @Column capabilitiesStorageHDD: boolean;
-  @Column capabilitiesStorageSSD: boolean;
-  @Column capabilitiesStorageNVME: boolean;
-
-  @Column(DataTypes.BIGINT) gpuAllocatable: number;
-  @Column(DataTypes.BIGINT) gpuAllocated: number;
-
-  @HasMany(() => ProviderSnapshotNodeGPU, "snapshotNodeId") gpus: ProviderSnapshotNodeGPU[];
-  @HasMany(() => ProviderSnapshotNodeCPU, "snapshotNodeId") cpus: ProviderSnapshotNodeCPU[];
+  /**
+   * The GPUs of the node
+   */
+  @HasMany(() => ProviderSnapshotNodeGPU, "snapshotNodeId") gpus!: ProviderSnapshotNodeGPU[];
+  /**
+   * The CPUs of the node
+   */
+  @HasMany(() => ProviderSnapshotNodeCPU, "snapshotNodeId") cpus!: ProviderSnapshotNodeCPU[];
 }

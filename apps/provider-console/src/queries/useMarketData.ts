@@ -1,6 +1,7 @@
-import { QueryKey, useQuery, UseQueryOptions } from "react-query";
+import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
-import { MarketData } from "@src/types";
+import type { MarketData } from "@src/types";
 import { QueryKeys } from "./queryKeys";
 
 async function getMarketData(): Promise<any> {
@@ -8,7 +9,11 @@ async function getMarketData(): Promise<any> {
 }
 
 export function useMarketData(options?: Omit<UseQueryOptions<MarketData, Error, any, QueryKey>, "queryKey" | "queryFn">) {
-  return useQuery<MarketData, Error>(QueryKeys.getFinancialDataKey(), () => getMarketData(), options);
+  return useQuery<MarketData, Error>({
+    queryKey: QueryKeys.getFinancialDataKey(),
+    queryFn: getMarketData,
+    ...options
+  });
 }
 
 async function getAKTPrice(): Promise<{ aktPrice: string }> {
@@ -21,13 +26,10 @@ async function getAKTPrice(): Promise<{ aktPrice: string }> {
 }
 
 export function useAKTData(options?: Omit<UseQueryOptions<{ aktPrice: string }, Error, any, QueryKey>, "queryKey" | "queryFn">) {
-  return useQuery<{ aktPrice: string }, Error>(
-    [...QueryKeys.getFinancialDataKey(), 'akt-price'],
-    () => getAKTPrice(),
-    {
-      refetchInterval: 5 * 60 * 1000, // 5 minutes in milliseconds
-      ...options
-    }
-  );
+  return useQuery<{ aktPrice: string }, Error>({
+    queryKey: [...QueryKeys.getFinancialDataKey(), "akt-price"],
+    queryFn: getAKTPrice,
+    refetchInterval: 5 * 60 * 1000, // 5 minutes in milliseconds
+    ...options
+  });
 }
-

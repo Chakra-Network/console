@@ -18,11 +18,13 @@
         "config",
         "stats",
         "release",
+        "ci",
         "repo",
         "styling",
         "observability",
         "analytics",
-        "template"
+        "template",
+        "notifications"
       ]
     ]
   }

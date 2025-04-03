@@ -1,6 +1,7 @@
 "use client";
-import { ReactNode } from "react";
-import { Control, Controller } from "react-hook-form";
+import type { ReactNode } from "react";
+import type { Control } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { MdMemory } from "react-icons/md";
 import {
   CustomTooltip,
@@ -18,7 +19,7 @@ import {
 } from "@akashnetwork/ui/components";
 import { InfoCircle } from "iconoir-react";
 
-import { RentGpusFormValuesType, SdlBuilderFormValuesType } from "@src/types";
+import type { RentGpusFormValuesType, SdlBuilderFormValuesType } from "@src/types";
 import { memoryUnits } from "@src/utils/akash/units";
 import { FormPaper } from "./FormPaper";
 
@@ -36,7 +37,7 @@ export const MemoryFormControl: React.FunctionComponent<Props> = ({ control, ser
       render={({ field, fieldState }) => (
         <FormPaper>
           <FormItem>
-            <div className="flex flex-col items-start sm:flex-row sm:items-center">
+            <div className="flex flex-col items-start lg:flex-row lg:items-center">
               <div className="flex items-center">
                 <MdMemory className="mr-2 text-2xl text-muted-foreground" />
                 <strong className="text-sm">Memory</strong>
@@ -58,7 +59,7 @@ export const MemoryFormControl: React.FunctionComponent<Props> = ({ control, ser
                 </CustomTooltip>
               </div>
 
-              <div className="mt-2 flex items-center sm:ml-4 sm:mt-0">
+              <div className="mt-2 flex items-center lg:ml-4 lg:mt-0">
                 <Input
                   type="number"
                   error={!!fieldState.error}

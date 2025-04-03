@@ -1,8 +1,9 @@
-import { QueryKey, useQuery, UseQueryOptions } from "react-query";
+import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
 import { browserEnvConfig } from "@src/config/browser-env.config";
-import { Block } from "@src/types";
+import type { Block } from "@src/types";
 import { ApiUrlService } from "@src/utils/apiUtils";
 import { QueryKeys } from "./queryKeys";
 
@@ -14,7 +15,9 @@ async function getBlock(apiEndpoint, id) {
 }
 
 export function useBlock(id, options = {}) {
-  return useQuery(QueryKeys.getBlockKey(id), () => getBlock(browserEnvConfig.NEXT_PUBLIC_MAINNET_API_URL, id), {
+  return useQuery({
+    queryKey: QueryKeys.getBlockKey(id),
+    queryFn: () => getBlock(browserEnvConfig.NEXT_PUBLIC_MAINNET_API_URL, id),
     refetchInterval: false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
@@ -29,5 +32,9 @@ async function getBlocks(limit: number): Promise<Block[]> {
 }
 
 export function useBlocks(limit: number, options?: Omit<UseQueryOptions<Block[], Error, any, QueryKey>, "queryKey" | "queryFn">) {
-  return useQuery<Block[], Error>(QueryKeys.getBlocksKey(limit), () => getBlocks(limit), options);
+  return useQuery<Block[], Error>({
+    queryKey: QueryKeys.getBlocksKey(limit),
+    queryFn: () => getBlocks(limit),
+    ...options
+  });
 }

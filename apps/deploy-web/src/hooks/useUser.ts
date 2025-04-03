@@ -3,7 +3,7 @@ import { useEffect, useMemo } from "react";
 import { useCustomUser } from "@src/hooks/useCustomUser";
 import { useStoredAnonymousUser } from "@src/hooks/useStoredAnonymousUser";
 import { analyticsService } from "@src/services/analytics/analytics.service";
-import { CustomUserProfile } from "@src/types/user";
+import type { CustomUserProfile } from "@src/types/user";
 
 export const useUser = (): CustomUserProfile => {
   const { user: registeredUser } = useCustomUser();
@@ -13,9 +13,13 @@ export const useUser = (): CustomUserProfile => {
 
   useEffect(() => {
     if (user?.id) {
-      analyticsService.setUser(user?.id);
+      analyticsService.identify({
+        id: user.id,
+        anonymous: !user.userId,
+        emailVerified: !!user.emailVerified
+      });
     }
-  }, [user?.id]);
+  }, [user]);
 
   return user;
 };

@@ -1,6 +1,7 @@
 import networkStore from "@src/store/networkStore";
-import { ISnapshotMetadata, ProviderSnapshots } from "@src/types";
-import { ProviderStatus, ProviderStatusDto, ProviderVersion } from "@src/types/provider";
+import type { ISnapshotMetadata } from "@src/types";
+import { ProviderSnapshots } from "@src/types";
+import type { ProviderStatus, ProviderStatusDto, ProviderVersion } from "@src/types/provider";
 import { bytesToShrink } from "./unitUtils";
 
 export type LocalProviderData = {
@@ -22,7 +23,7 @@ export function providerStatusToDto(providerStatus: ProviderStatus, providerVers
   };
 }
 
-export function getNetworkCapacityDto(networkCapacity) {
+export function getNetworkCapacityDto(networkCapacity: any) {
   return {
     ...networkCapacity,
     activeCPU: networkCapacity.activeCPU / 1000,

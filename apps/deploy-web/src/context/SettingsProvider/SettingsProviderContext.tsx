@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 
-import { useLocalStorage } from "@src/hooks/useLocalStorage";
+import { useLocalStorage } from "@src/hooks/useLocalStorage"; // eslint-disable-line import-x/no-cycle
 import { usePreviousRoute } from "@src/hooks/usePreviousRoute";
 import { queryClient } from "@src/queries";
 import networkStore from "@src/store/networkStore";
@@ -197,7 +197,7 @@ export const SettingsProvider: FCWithChildren = ({ children }) => {
     return fastestNode;
   };
 
-  const updateSettings = newSettings => {
+  const updateSettings = (newSettings: any) => {
     setSettings(prevSettings => {
       clearQueries(prevSettings, newSettings);
       setLocalStorageItem("settings", JSON.stringify(newSettings));
@@ -206,7 +206,7 @@ export const SettingsProvider: FCWithChildren = ({ children }) => {
     });
   };
 
-  const clearQueries = (prevSettings, newSettings) => {
+  const clearQueries = (prevSettings: Settings, newSettings: Settings) => {
     if (prevSettings.apiEndpoint !== newSettings.apiEndpoint || (prevSettings.isCustomNode && !newSettings.isCustomNode)) {
       // Cancel and remove queries from cache if the api endpoint is changed
       queryClient.resetQueries();

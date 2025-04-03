@@ -28,14 +28,33 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
+      "eslint --fix --quiet",
       "prettier --write"
     ],
     "package.json": [
       "node_modules/.bin/sort-package-json"
+    ],
+    "./packages/ui/**/*.ts": [
+      "npm run validate:types -w packages/ui"
+    ],
+    "./packages/net/**/*.ts": [
+      "npm run validate:types -w packages/net"
+    ],
+    "./packages/network-store/**/*.ts": [
+      "npm run validate:types -w packages/network-store"
+    ],
+    "./packages/http-sdk/**/*.ts": [
+      "npm run validate:types -w packages/http-sdk"
+    ],
+    "./packages/logging/**/*.ts": [
+      "npm run validate:types -w packages/logging"
+    ],
+    "./packages/database/**/*.ts": [
+      "npm run validate:types -w packages/database"
     ]
   },
   "dependencies": {
+    "@interchain-ui/react": "^1.23.31",
     "drizzle-orm": "^0.31.2",
     "pg": "^8.11.6"
   },
@@ -46,19 +65,20 @@
     "@commitlint/config-conventional": "^19.5.0",
     "@release-it/conventional-changelog": "github:akash-network/conventional-changelog#feature/pre-release",
     "cross-env": "^7.0.3",
+    "eslint-plugin-import-x": "^4.10.0",
     "husky": "^9.1.6",
     "lint-staged": "^15.4.0",
     "release-it": "^17.6.0",
     "sort-package-json": "^2.14.0",
     "turbo": "^2.3.3"
   },
-  "packageManager": "npm@10.7.0",
+  "packageManager": "npm@11.2.0",
   "engines": {
-    "node": "20.14.0",
-    "npm": "10.7.0"
+    "node": "22.14.0",
+    "npm": "11.2.0"
   },
   "volta": {
-    "node": "20.14.0",
-    "npm": "10.7.0"
+    "node": "22.14.0",
+    "npm": "11.2.0"
   }
 }

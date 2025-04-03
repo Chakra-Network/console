@@ -1,6 +1,8 @@
 "use client";
-import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Control, Controller } from "react-hook-form";
+import type { ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { Control } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { buttonVariants, CustomTooltip } from "@akashnetwork/ui/components";
 import { cn } from "@akashnetwork/ui/utils";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
@@ -13,8 +15,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { useGpuTemplates } from "@src/hooks/useGpuTemplates";
-import { TemplateOutputSummaryWithCategory } from "@src/queries/useTemplateQuery";
-import { RentGpusFormValuesType, SdlBuilderFormValuesType, ServiceType } from "@src/types";
+import type { TemplateOutputSummaryWithCategory } from "@src/queries/useTemplateQuery";
+import type { RentGpusFormValuesType, SdlBuilderFormValuesType, ServiceType } from "@src/types";
 
 type Props = {
   children?: ReactNode;
@@ -29,7 +31,8 @@ export const ImageSelect: React.FunctionComponent<Props> = ({ control, currentSe
   const [hoveredTemplate, setHoveredTemplate] = useState<TemplateOutputSummaryWithCategory | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateOutputSummaryWithCategory | null>(null);
   const [popperWidth, setPopperWidth] = useState<number | null>(null);
-  const eleRefs = useRef(null);
+  // TODO: https://github.com/akash-network/console/issues/1045
+  const eleRefs = useRef(null) as any;
   const textFieldRef = useRef<HTMLInputElement>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const filteredGpuTemplates = gpuTemplates.filter(x => x.name?.toLowerCase().includes(currentService.image));

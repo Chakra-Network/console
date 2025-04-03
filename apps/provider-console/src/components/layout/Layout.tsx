@@ -1,5 +1,6 @@
 "use client";
-import React, { ReactNode, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import React, { useEffect, useState } from "react";
 import { IntlProvider } from "react-intl";
 import { useMediaQuery, useTheme as useMuiTheme } from "@mui/material";
 
@@ -53,7 +54,7 @@ const LayoutApp: React.FC<Props> = ({ children, isLoading, disableContainer, con
     if (_isNavOpen !== null && !smallScreen) {
       setIsNavOpen(_isNavOpen === "true");
     }
-  });
+  }, [smallScreen]);
 
   const onOpenMenuClick = () => {
     setIsNavOpen(prev => {
@@ -69,7 +70,6 @@ const LayoutApp: React.FC<Props> = ({ children, isLoading, disableContainer, con
     setIsMobileOpen(!isMobileOpen);
   };
 
-  console.log(isLoading);
   return (
     <>
       <div className="bg-card min-h-full">

@@ -11,7 +11,8 @@ import { z } from "zod";
 
 import { WalletController } from "@src/billing/controllers/wallet/wallet.controller";
 import { chainDb } from "@src/db/dbConnection";
-import { TopUpDeploymentsController } from "@src/deployment/controllers/deployment/deployment.controller";
+import { TopUpDeploymentsController } from "@src/deployment/controllers/deployment/top-up-deployments.controller";
+import { GpuBotController } from "@src/deployment/controllers/gpu-bot/gpu-bot.controller";
 import { UserController } from "@src/user/controllers/user/user.controller";
 import { UserConfigService } from "@src/user/services/user-config/user-config.service";
 import { ProviderController } from "./deployment/controllers/provider/provider.controller";
@@ -63,6 +64,15 @@ program
     });
   });
 
+program
+  .command("gpu-pricing-bot")
+  .description("Create deployments for every gpu models to get up to date pricing information")
+  .action(async (options, command) => {
+    await executeCliHandler(command.name(), async () => {
+      await container.resolve(GpuBotController).createGpuBids();
+    });
+  });
+
 const userConfig = container.resolve(UserConfigService);
 program
   .command("cleanup-stale-anonymous-users")
@@ -82,14 +92,20 @@ async function executeCliHandler(name: string, handler: () => Promise<void>) {
     logger.info({ event: "COMMAND_START", name });
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { migratePG, closeConnections } = await require("./core/providers/postgres.provider");
-    await migratePG();
-    await chainDb.authenticate();
 
-    await handler();
+    try {
+      await migratePG();
+      await chainDb.authenticate();
 
-    await closeConnections();
-    await chainDb.close();
-    logger.info({ event: "COMMAND_END", name });
+      await handler();
+
+      logger.info({ event: "COMMAND_END", name });
+    } catch (error) {
+      logger.error({ event: "COMMAND_ERROR", name, message: error.message, stack: error.stack });
+    } finally {
+      await closeConnections();
+      await chainDb.close();
+    }
   });
 }
 

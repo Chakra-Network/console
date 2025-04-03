@@ -1,10 +1,13 @@
 "use client";
+import type { ChangeEventHandler } from "react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
   Button,
+  Card,
+  CardContent,
   Checkbox,
   CustomTooltip,
   DropdownMenu,
@@ -20,22 +23,24 @@ import { ArrowRight, BadgeCheck, Bin, InfoCircle, MoreHoriz, Xmark } from "icono
 import yaml from "js-yaml";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { event } from "nextjs-google-analytics";
 import { useSnackbar } from "notistack";
 
-import { LocalCert } from "@src/context/CertificateProvider/CertificateProviderContext";
 import { useWallet } from "@src/context/WalletProvider";
 import { useManagedDeploymentConfirm } from "@src/hooks/useManagedDeploymentConfirm";
 import { useWhen } from "@src/hooks/useWhen";
 import { useBidList } from "@src/queries/useBidQuery";
+import { useBlock } from "@src/queries/useBlocksQuery";
 import { useDeploymentDetail } from "@src/queries/useDeploymentQuery";
 import { useProviderList } from "@src/queries/useProvidersQuery";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
-import { BidDto } from "@src/types/deployment";
+import { analyticsService } from "@src/services/analytics/analytics.service";
+import networkStore from "@src/store/networkStore";
+import type { BidDto } from "@src/types/deployment";
 import { RouteStep } from "@src/types/route-steps.type";
 import { deploymentData } from "@src/utils/deploymentData";
+import { TRIAL_ATTRIBUTE } from "@src/utils/deploymentData/v1beta3";
 import { getDeploymentLocalData } from "@src/utils/deploymentLocalDataUtils";
 import { sendManifestToProvider } from "@src/utils/deploymentUtils";
+import { addScriptToHead } from "@src/utils/domUtils";
 import { TransactionMessageData } from "@src/utils/TransactionMessageData";
 import { domainName, UrlService } from "@src/utils/urlUtils";
 import { useCertificate } from "../../context/CertificateProvider";
@@ -58,6 +63,7 @@ const REFRESH_BIDS_INTERVAL = 7000;
 const MAX_NUM_OF_BID_REQUESTS = Math.floor((5.5 * 60 * 1000) / REFRESH_BIDS_INTERVAL);
 // Show a warning after 1 minute
 const WARNING_NUM_OF_BID_REQUESTS = Math.round((60 * 1000) / REFRESH_BIDS_INTERVAL);
+const TRIAL_SIGNUP_WARNING_TIMEOUT = 33000;
 
 export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
   const [isSendingManifest, setIsSendingManifest] = useState(false);
@@ -75,14 +81,19 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
   const warningRequestsReached = numberOfRequests > WARNING_NUM_OF_BID_REQUESTS;
   const maxRequestsReached = numberOfRequests > MAX_NUM_OF_BID_REQUESTS;
   const { favoriteProviders } = useLocalNotes();
-  const { data: bids, isLoading: isLoadingBids } = useBidList(address, dseq, {
+  const {
+    data: bids,
+    isLoading: isLoadingBids,
+    dataUpdatedAt: bidsUpdatedAt
+  } = useBidList(address, dseq, {
     initialData: [],
     refetchInterval: REFRESH_BIDS_INTERVAL,
-    onSuccess: () => {
-      setNumberOfRequests(prev => ++prev);
-    },
     enabled: !maxRequestsReached && !isSendingManifest
   });
+  useEffect(() => {
+    setNumberOfRequests(prev => ++prev);
+  }, [bidsUpdatedAt]);
+
   const activeBid = useMemo(() => bids?.find(bid => bid.state === "active"), [bids]);
   const hasActiveBid = !!activeBid;
   const { data: deploymentDetail, refetch: getDeploymentDetail } = useDeploymentDetail(address, dseq, { refetchOnMount: false, enabled: false });
@@ -106,16 +117,21 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useWhen(hasActiveBid, () => selectBid(activeBid));
+  useWhen(hasActiveBid, () => {
+    if (activeBid) {
+      selectBid(activeBid);
+    }
+  });
 
+  const chainNetwork = networkStore.useSelectedNetworkId();
   const sendManifest = useCallback(async () => {
     setIsSendingManifest(true);
     const bidKeys = Object.keys(selectedBids);
 
     const localDeploymentData = getDeploymentLocalData(dseq);
 
-    event(AnalyticsEvents.SEND_MANIFEST, {
-      category: AnalyticsCategory.DEPLOYMENTS,
+    analyticsService.track("send_manifest", {
+      category: "deployments",
       label: "Send manifest after creating lease"
     });
 
@@ -141,8 +157,16 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
         if (!provider) {
           throw new Error("Provider not found");
         }
-        await sendManifestToProvider(provider, mani, dseq, localCert as LocalCert);
+        await sendManifestToProvider(provider, mani, { dseq, localCert, chainNetwork });
       }
+
+      // Ad tracking script
+      addScriptToHead({
+        src: "https://pxl.growth-channel.net/s/76250b26-c260-4776-874b-471ed290230d",
+        async: true,
+        defer: true
+      });
+
       router.replace(UrlService.deploymentDetails(dseq, "EVENTS", "events"));
     } catch (err) {
       enqueueSnackbar(<ManifestErrorSnackbar err={err} />, { variant: "error", autoHideDuration: null });
@@ -154,7 +178,7 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
 
       setIsSendingManifest(false);
     }
-  }, [selectedBids, dseq, providers, localCert, isManaged, enqueueSnackbar, closeSnackbar, router]);
+  }, [selectedBids, dseq, providers, localCert, isManaged, enqueueSnackbar, closeSnackbar, router, chainNetwork]);
 
   // Filter bids
   useEffect(() => {
@@ -184,7 +208,29 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, bids, providers, isFilteringFavorites, isFilteringAudited, favoriteProviders]);
 
-  const selectBid = bid => {
+  const [zeroBidsForTrialWarningDisplayed, setZeroBidsForTrialWarningDisplayed] = useState(false);
+  const { data: block } = useBlock(dseq, {
+    disabled: true
+  });
+
+  useEffect(() => {
+    if (!isTrialing || numberOfRequests === 0 || (bids && bids.length > 0)) {
+      setZeroBidsForTrialWarningDisplayed(false);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      const blockTime = new Date(block.block.header.time).getTime();
+      const now = new Date().getTime();
+
+      setZeroBidsForTrialWarningDisplayed(now - blockTime > TRIAL_SIGNUP_WARNING_TIMEOUT);
+      clearInterval(intervalId);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [block, bids, isTrialing, numberOfRequests]);
+
+  const selectBid = (bid: BidDto) => {
     setSelectedBids(prev => ({ ...prev, [bid.gseq]: bid }));
   };
 
@@ -204,8 +250,8 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
 
       if (!response) throw new Error("Rejected transaction");
 
-      event(AnalyticsEvents.CREATE_LEASE, {
-        category: AnalyticsCategory.DEPLOYMENTS,
+      analyticsService.track("create_lease", {
+        category: "deployments",
         label: "Create lease"
       });
       await sendManifest();
@@ -217,6 +263,7 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
   }
 
   async function handleCloseDeployment() {
+    analyticsService.track("close_deployment_btn_clk", "Amplitude");
     const isConfirmed = await closeDeploymentConfirm([dseq]);
 
     if (!isConfirmed) {
@@ -231,10 +278,22 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
     }
   }
 
-  const onSearchChange = event => {
+  const onSearchChange: ChangeEventHandler<HTMLInputElement> = event => {
     const value = event.target.value;
     setSearch(value);
   };
+
+  const trialProviderCount = useMemo(() => {
+    if (providers) {
+      return providers.filter(provider => {
+        return provider.attributes.some(attribute => {
+          return attribute.key === TRIAL_ATTRIBUTE && attribute.value === "true";
+        });
+      }).length;
+    }
+
+    return 0;
+  }, [providers]);
 
   return (
     <>
@@ -309,13 +368,13 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
           </div>
         )}
 
-        {!isLoadingBids && (allClosed || bids?.length === 0) && (
+        {!isLoadingBids && allClosed && (
           <Button variant="default" color="secondary" onClick={handleCloseDeployment} size="sm">
             Close Deployment
           </Button>
         )}
 
-        {warningRequestsReached && !maxRequestsReached && (bids?.length || 0) === 0 && (
+        {!zeroBidsForTrialWarningDisplayed && warningRequestsReached && !maxRequestsReached && (bids?.length || 0) === 0 && (
           <div className="pt-4">
             <Alert variant="warning">
               There should be bids by now... You can wait longer in case a bid shows up or close the deployment and try again with a different configuration.
@@ -323,14 +382,14 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
           </div>
         )}
 
-        {(isLoadingBids || (bids?.length || 0) === 0) && !maxRequestsReached && !isSendingManifest && (
+        {(isLoadingBids || (bids?.length || 0) === 0) && !maxRequestsReached && !isSendingManifest && !zeroBidsForTrialWarningDisplayed && (
           <div className="flex flex-col items-center justify-center pt-4 text-center">
             <Spinner size="large" />
             <div className="pt-4">Waiting for bids...</div>
           </div>
         )}
 
-        {maxRequestsReached && (bids?.length || 0) === 0 && (
+        {!zeroBidsForTrialWarningDisplayed && maxRequestsReached && (bids?.length || 0) === 0 && (
           <div className="pt-4">
             <Alert variant="warning">
               There's no bid for the current deployment. You can close the deployment and try again with a different configuration.
@@ -342,7 +401,14 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
           <div className="my-1 flex flex-col items-center justify-between md:flex-row">
             <div className="flex w-full items-center md:w-auto">
               <div className="flex items-center space-x-2">
-                <Checkbox checked={isFilteringFavorites} onCheckedChange={value => setIsFilteringFavorites(value as boolean)} id="provider-favorites" />
+                <Checkbox
+                  checked={isFilteringFavorites}
+                  onCheckedChange={value => {
+                    setIsFilteringFavorites(value as boolean);
+                    analyticsService.track("filtered_by_favorite_providers", { value }, "Amplitude");
+                  }}
+                  id="provider-favorites"
+                />
                 <label
                   htmlFor="provider-favorites"
                   className="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -354,7 +420,10 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
               <div className="ml-4 flex items-center space-x-2">
                 <Checkbox
                   checked={isFilteringAudited}
-                  onCheckedChange={value => setIsFilteringAudited(value as boolean)}
+                  onCheckedChange={value => {
+                    setIsFilteringAudited(value as boolean);
+                    analyticsService.track("filtered_by_audited_providers", { value }, "Amplitude");
+                  }}
                   id="provider-audited"
                   data-testid="create-lease-filter-audited"
                 />
@@ -425,8 +494,8 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
 
           {isTrialing && (
             <Alert variant="destructive">
-              <AlertTitle className="text-lg dark:text-white/90">Free Trial!</AlertTitle>
-              <AlertDescription className="space-y-1 dark:text-white/90">
+              <AlertTitle className="text-center text-lg dark:text-white/90">Free Trial!</AlertTitle>
+              <AlertDescription className="space-y-1 text-center dark:text-white/90">
                 <p>You are using a free trial and are limited to only a few providers on the network.</p>
                 <p>
                   <Link href={UrlService.login()} className="font-bold underline">
@@ -442,6 +511,31 @@ export const CreateLease: React.FunctionComponent<Props> = ({ dseq }) => {
             </Alert>
           )}
         </ViewPanel>
+      )}
+
+      {zeroBidsForTrialWarningDisplayed && (
+        <div className="pt-4">
+          <Card>
+            <CardContent>
+              <div className="px-16 pb-4 pt-6 text-center">
+                <h3 className="mb-4 text-xl font-bold">Waiting for bids</h3>
+                <p className="mb-8">
+                  It looks like you’re not receiving any bids. This is likely because all trial providers are currently in use. Console offers{" "}
+                  {trialProviderCount} providers for trial users, but many more are available for non-trial users. To access the full list of providers, we
+                  recommend signing up and adding funds to your account.
+                </p>
+                <p>
+                  <Button onClick={() => handleCloseDeployment()} variant="outline" type="button" size="sm" className="mr-4">
+                    Close Deployment
+                  </Button>
+                  <Button onClick={() => router.push(UrlService.signup())} color="secondary" variant="default" type="button" size="sm">
+                    Sign Up
+                  </Button>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </>
   );

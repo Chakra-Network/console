@@ -8,18 +8,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { CI_CD_TEMPLATE_ID } from "@src/config/remote-deploy.config";
-import { useTemplates } from "@src/context/TemplatesProvider";
-import { TemplateOutputSummaryWithCategory } from "@src/queries/useTemplateQuery";
+import type { TemplateOutputSummaryWithCategory } from "@src/queries/useTemplateQuery";
+import { useTemplates } from "@src/queries/useTemplateQuery";
+import { analyticsService } from "@src/services/analytics/analytics.service";
 import sdlStore from "@src/store/sdlStore";
-import { TemplateCreation } from "@src/types";
+import type { TemplateCreation } from "@src/types";
 import { RouteStep } from "@src/types/route-steps.type";
 import { helloWorldTemplate } from "@src/utils/templates";
-import { domainName, NewDeploymentParams, UrlService } from "@src/utils/urlUtils";
+import type { NewDeploymentParams } from "@src/utils/urlUtils";
+import { domainName, UrlService } from "@src/utils/urlUtils";
 import { CustomNextSeo } from "../shared/CustomNextSeo";
 import { TemplateBox } from "../templates/TemplateBox";
 import { DeployOptionBox } from "./DeployOptionBox";
 
 const previewTemplateIds = [
+  "akash-network-awesome-akash-DeepSeek-R1-Distill-Llama-70B",
   "akash-network-awesome-akash-Llama-3.1-8B",
   "akash-network-awesome-akash-Llama-3.1-405B-FP8",
   "akash-network-awesome-akash-Llama-3.1-405B-BF16",
@@ -47,18 +50,22 @@ export const TemplateList: React.FunctionComponent<Props> = ({ onChangeGitProvid
   const [, setSdlEditMode] = useAtom(sdlStore.selectedSdlEditMode);
 
   const handleGithubTemplate = async () => {
+    analyticsService.track("build_n_deploy_btn_clk", "Amplitude");
     onChangeGitProvider(true);
     router.push(UrlService.newDeployment({ step: RouteStep.editDeployment, gitProvider: "github", templateId: CI_CD_TEMPLATE_ID }));
   };
 
   useEffect(() => {
     if (templates) {
-      const _previewTemplates = templates.filter(template => previewTemplateIds.includes(template.id));
+      const _previewTemplates = previewTemplateIds
+        .map(id => templates.find(template => template.id === id))
+        .filter((template): template is TemplateOutputSummaryWithCategory => template !== undefined);
       setPreviewTemplates(_previewTemplates);
     }
   }, [templates]);
 
   function onSDLBuilderClick(page: NewDeploymentParams["page"] = "new-deployment") {
+    analyticsService.track(page === "deploy-linux" ? "launch_container_vm_btn_clk" : "run_custom_container_btn_clk", "Amplitude");
     setEditedManifest("");
     onTemplateSelected(null);
     setSdlEditMode("builder");

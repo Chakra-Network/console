@@ -1,15 +1,32 @@
 import yaml from "js-yaml";
 import { nanoid } from "nanoid";
 
-import { ExposeType, ProfileGpuModelType,ServiceType } from "@src/types";
+import type { ExposeType, ProfileGpuModelType, ServiceType } from "@src/types";
 import { CustomValidationError } from "../deploymentData";
 import { capitalizeFirstLetter } from "../stringUtils";
 import { defaultHttpOptions } from "./data";
+
+export const parseSvcCommand = (command?: string | string[]): string => {
+  if (!command) {
+    return "";
+  }
+
+  if (typeof command === "string") {
+    return parseSvcCommand([command]);
+  }
+
+  if (command[0] === "sh" && command[1] === "-c") {
+    return command.slice(2).filter(Boolean).join("\n");
+  }
+
+  return command.filter(Boolean).join("\n");
+};
 
 export const importSimpleSdl = (yamlStr: string) => {
   try {
     const yamlJson = yaml.load(yamlStr) as any;
     const services: ServiceType[] = [];
+    if (!yamlJson.services) return services;
 
     const sortedServicesNames = Object.keys(yamlJson.services).sort();
     sortedServicesNames.forEach(svcName => {
@@ -20,15 +37,11 @@ export const importSimpleSdl = (yamlStr: string) => {
         title: svcName,
         image: svc.image,
         hasCredentials: !!svc.credentials,
-        credentials: svc.credentials,
+        credentials: svc.credentials
       };
 
       const compute = yamlJson.profiles.compute[svcName];
       const storages = compute.resources.storage.map ? compute.resources.storage : [compute.resources.storage];
-      const persistentStorage = storages.find(s => s.attributes?.persistent === true);
-      const hasPersistentStorage = !!persistentStorage;
-      const ephStorage = storages.find(s => !s.attributes);
-      const persistentStorageName = hasPersistentStorage ? persistentStorage.name : "data";
 
       // TODO validation
       // Service compute profile
@@ -39,32 +52,46 @@ export const importSimpleSdl = (yamlStr: string) => {
         hasGpu: !!compute.resources.gpu,
         ram: getResourceDigit(compute.resources.memory.size),
         ramUnit: getResourceUnit(compute.resources.memory.size),
-        storage: getResourceDigit(ephStorage?.size || "1Gi"),
-        storageUnit: getResourceUnit(ephStorage?.size || "1Gi"),
-        hasPersistentStorage,
-        persistentStorage: hasPersistentStorage ? getResourceDigit(persistentStorage?.size) : 10,
-        persistentStorageUnit: hasPersistentStorage ? getResourceUnit(persistentStorage?.size) : "Gi",
-        persistentStorageParam: {
-          name: persistentStorageName,
-          type: hasPersistentStorage ? persistentStorage?.attributes?.class : "beta2",
-          mount: hasPersistentStorage ? svc.params?.storage[persistentStorageName]?.mount : "",
-          readOnly: hasPersistentStorage ? svc.params?.storage[persistentStorageName]?.readOnly : false
-        }
+        storage: storages.map((storage: any) => {
+          const type = storage.attributes?.class || "beta3";
+          const isPersistent = storage.attributes?.persistent || false;
+          const isReadOnly = svc.params?.storage[storage.name]?.readOnly || false;
+
+          if (type === "ram") {
+            if (isPersistent) {
+              throw new CustomValidationError(`A storage of class "ram" cannot be persistent.`);
+            }
+
+            if (isReadOnly) {
+              throw new CustomValidationError(`A storage of class "ram" cannot be read-only.`);
+            }
+          }
+
+          return {
+            size: getResourceDigit(storage.size || "1Gi"),
+            unit: getResourceUnit(storage.size || "1Gi"),
+            isPersistent,
+            type,
+            name: storage.name,
+            mount: svc.params?.storage[storage.name]?.mount || "",
+            isReadOnly
+          };
+        })
       };
 
       // Command
       service.command = {
-        command: svc.command?.length > 0 ? svc.command.join(" ") : "",
+        command: parseSvcCommand(svc.command),
         arg: svc.args ? svc.args[0] : ""
       };
 
       // Env
-      service.env = svc.env?.map(e => ({ id: nanoid(), key: e.split("=")[0], value: e.split("=")[1] })) || [];
+      service.env = svc.env?.map((e: any) => ({ id: nanoid(), key: e.split("=")[0], value: e.split("=")[1] })) || [];
 
       // Expose
       service.expose = [];
-      svc.expose?.forEach(expose => {
-        const isGlobal = expose.to.find(t => t.global);
+      svc.expose?.forEach((expose: any) => {
+        const isGlobal = expose.to.find((t: any) => t.global);
 
         const _expose: ExposeType = {
           id: nanoid(),
@@ -72,8 +99,8 @@ export const importSimpleSdl = (yamlStr: string) => {
           as: expose.as || 80,
           proto: expose.proto === "tcp" ? expose.proto : "http",
           global: !!isGlobal,
-          to: expose.to.filter(t => t.global === undefined).map(t => ({ id: nanoid(), value: t.service })),
-          accept: expose.accept?.map(a => ({ id: nanoid(), value: a })) || [],
+          to: expose.to.filter((t: any) => t.global === undefined).map((t: any) => ({ id: nanoid(), value: t.service })),
+          accept: expose.accept?.map((a: string) => ({ id: nanoid(), value: a })) || [],
           ipName: isGlobal?.ip ? isGlobal.ip : "",
           hasCustomHttpOptions: !!expose.http_options,
           httpOptions: {
@@ -110,8 +137,8 @@ export const importSimpleSdl = (yamlStr: string) => {
           denom: placementPricing.denom
         },
         signedBy: {
-          anyOf: placement.signedBy && placement.signedBy?.anyOf ? placement.signedBy.anyOf.map(x => ({ id: nanoid(), value: x })) : [],
-          allOf: placement.signedBy && placement.signedBy?.allOf ? placement.signedBy.allOf.map(x => ({ id: nanoid(), value: x })) : []
+          anyOf: placement.signedBy && placement.signedBy?.anyOf ? placement.signedBy.anyOf.map((x: string) => ({ id: nanoid(), value: x })) : [],
+          allOf: placement.signedBy && placement.signedBy?.allOf ? placement.signedBy.allOf.map((x: string) => ({ id: nanoid(), value: x })) : []
         },
         attributes: placement.attributes
           ? Object.keys(placement.attributes).map(attKey => {

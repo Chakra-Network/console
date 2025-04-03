@@ -2,7 +2,7 @@ import cloneDeep from "lodash/cloneDeep";
 import flow from "lodash/flow";
 import isMatch from "lodash/isMatch";
 
-import { ServiceType } from "@src/types";
+import type { ServiceType } from "@src/types";
 import { SSH_EXPOSE, SSH_VM_IMAGES } from "@src/utils/sdl/data";
 
 interface TransformOptions {
@@ -84,7 +84,7 @@ function ensureServiceCount(input: ServiceType) {
 }
 
 function mapImage(input: ServiceType) {
-  const image = SSH_VM_IMAGES[input.image];
+  const image = SSH_VM_IMAGES[input.image as keyof typeof SSH_VM_IMAGES];
 
   if (!image) {
     return input;

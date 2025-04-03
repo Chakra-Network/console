@@ -1,12 +1,13 @@
 "use client";
-import React, { ReactNode, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import React, { useMemo, useState } from "react";
 import { Button, buttonVariants, Separator } from "@akashnetwork/ui/components";
 import { cn } from "@akashnetwork/ui/utils";
 import Drawer from "@mui/material/Drawer";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import type { ClassValue } from "clsx";
-import { Discord, Github, Menu, MenuScale, Rocket, X as TwitterX, Youtube } from "iconoir-react";
+import { Discord, Github, HeadsetHelp, Menu, MenuScale, Rocket, X as TwitterX, Youtube } from "iconoir-react";
 import { Cloud, HelpCircle, Home, MultiplePages, OpenInWindow, Server, Settings, Tools } from "iconoir-react";
 import { useAtom } from "jotai";
 import getConfig from "next/config";
@@ -15,7 +16,7 @@ import Link from "next/link";
 
 import { useWallet } from "@src/context/WalletProvider";
 import sdlStore from "@src/store/sdlStore";
-import { ISidebarGroupMenu } from "@src/types";
+import type { ISidebarGroupMenu, ISidebarRoute } from "@src/types";
 import { UrlService } from "@src/utils/urlUtils";
 import { MobileSidebarUser } from "./MobileSidebarUser";
 import { ModeToggle } from "./ModeToggle";
@@ -45,7 +46,7 @@ export const Sidebar: React.FunctionComponent<Props> = ({ isMobileOpen, handleDr
   const wallet = useWallet();
 
   const mainRoutes = useMemo(() => {
-    const routes = [
+    const routes: ISidebarRoute[] = [
       {
         title: "Home",
         icon: props => <Home {...props} />,
@@ -87,7 +88,7 @@ export const Sidebar: React.FunctionComponent<Props> = ({ isMobileOpen, handleDr
 
     if (wallet.isWalletConnected && !wallet.isManaged) {
       routes.push({
-        title: "Settings",
+        title: "App Settings",
         icon: props => <Settings {...props} />,
         url: UrlService.settings(),
         activeRoutes: [UrlService.settings()]
@@ -107,7 +108,7 @@ export const Sidebar: React.FunctionComponent<Props> = ({ isMobileOpen, handleDr
     [mainRoutes]
   );
 
-  const extraRoutes = [
+  const extraRoutes: ISidebarGroupMenu[] = [
     {
       hasDivider: false,
       routes: [
@@ -117,6 +118,14 @@ export const Sidebar: React.FunctionComponent<Props> = ({ isMobileOpen, handleDr
           url: "https://akash.network",
           activeRoutes: [],
           target: "_blank"
+        },
+        {
+          title: "Deploy with Expert",
+          icon: props => <HeadsetHelp {...props} />,
+          url: "https://share.hsforms.com/1gQOaeJXgQ-GMc7MnsTOmsAsaima",
+          activeRoutes: [],
+          target: "_blank",
+          isNew: true
         },
         {
           title: "Stats",
@@ -285,7 +294,8 @@ export const Sidebar: React.FunctionComponent<Props> = ({ isMobileOpen, handleDr
         }}
         sx={{
           display: { xs: "block", sm: "block", md: "none" },
-          "& .MuiDrawer-paper": { boxSizing: "border-box", width: DRAWER_WIDTH, overflow: "hidden" }
+          "& .MuiDrawer-paper": { boxSizing: "border-box", width: DRAWER_WIDTH, overflow: "hidden" },
+          zIndex: 990
         }}
         PaperProps={{
           sx: {

@@ -2,11 +2,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { certificateManager } from "@akashnetwork/akashjs/build/certificates/certificate-manager";
 import { Snackbar } from "@akashnetwork/ui/components";
-import { event } from "nextjs-google-analytics";
 import { useSnackbar } from "notistack";
 
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
-import { RestApiCertificate } from "@src/types/certificate";
+import { analyticsService } from "@src/services/analytics/analytics.service";
+import type { RestApiCertificate } from "@src/types/certificate";
 import { ApiUrlService, loadWithPagination } from "@src/utils/apiUtils";
 import { TransactionMessageData } from "@src/utils/TransactionMessageData";
 import { getStorageWallets, updateWallet } from "@src/utils/walletUtils";
@@ -19,7 +18,7 @@ export type LocalCert = {
   address: string;
 };
 
-type ChainCertificate = {
+export type ChainCertificate = {
   serial: string;
   parsed: string;
   pem: {
@@ -39,9 +38,9 @@ type ChainCertificate = {
 };
 
 type ContextType = {
-  loadValidCertificates: (showSnackbar?: boolean) => Promise<any>;
+  loadValidCertificates: (showSnackbar?: boolean) => Promise<ChainCertificate[]>;
   selectedCertificate: ChainCertificate | null;
-  setSelectedCertificate: React.Dispatch<ChainCertificate>;
+  setSelectedCertificate: React.Dispatch<ChainCertificate | null>;
   isLoadingCertificates: boolean;
   loadLocalCert: () => Promise<void>;
   localCert: LocalCert | null;
@@ -50,7 +49,7 @@ type ContextType = {
   validCertificates: Array<ChainCertificate>;
   setValidCertificates: React.Dispatch<React.SetStateAction<ChainCertificate[]>>;
   localCerts: Array<LocalCert> | null;
-  setLocalCerts: React.Dispatch<React.SetStateAction<LocalCert[]>>;
+  setLocalCerts: React.Dispatch<React.SetStateAction<LocalCert[] | null>>;
   createCertificate: () => Promise<void>;
   isCreatingCert: boolean;
   regenerateCertificate: () => Promise<void>;
@@ -60,7 +59,7 @@ type ContextType = {
 
 const CertificateProviderContext = React.createContext<ContextType>({} as ContextType);
 
-export const CertificateProvider = ({ children }) => {
+export const CertificateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isCreatingCert, setIsCreatingCert] = useState(false);
   const [validCertificates, setValidCertificates] = useState<Array<ChainCertificate>>([]);
   const [selectedCertificate, setSelectedCertificate] = useState<ChainCertificate | null>(null);
@@ -74,7 +73,7 @@ export const CertificateProvider = ({ children }) => {
   const { apiEndpoint } = settings;
 
   const loadValidCertificates = useCallback(
-    async (showSnackbar?: boolean) => {
+    async (showSnackbar?: boolean): Promise<ChainCertificate[]> => {
       setIsLoadingCertificates(true);
 
       try {
@@ -187,11 +186,11 @@ export const CertificateProvider = ({ children }) => {
         });
         const validCerts = await loadValidCertificates();
         loadLocalCert();
-        const currentCert = validCerts.find(({ parsed }) => parsed === crtpem);
-        setSelectedCertificate(currentCert as ChainCertificate);
+        const currentCert = validCerts.find(({ parsed }) => parsed === crtpem) || null;
+        setSelectedCertificate(currentCert);
 
-        event(AnalyticsEvents.CREATE_CERTIFICATE, {
-          category: AnalyticsCategory.CERTIFICATES,
+        analyticsService.track("create_certificate", {
+          category: "certificates",
           label: "Created certificate"
         });
       }
@@ -228,8 +227,8 @@ export const CertificateProvider = ({ children }) => {
         const currentCert = validCerts.find(x => x.parsed === crtpem);
         setSelectedCertificate(currentCert as ChainCertificate);
 
-        event(AnalyticsEvents.REGENERATE_CERTIFICATE, {
-          category: AnalyticsCategory.CERTIFICATES,
+        analyticsService.track("regenerate_certificate", {
+          category: "certificates",
           label: "Regenerated certificate"
         });
       }
@@ -263,8 +262,8 @@ export const CertificateProvider = ({ children }) => {
         setSelectedCertificate(null);
       }
 
-      event(AnalyticsEvents.REVOKE_CERTIFICATE, {
-        category: AnalyticsCategory.CERTIFICATES,
+      analyticsService.track("revoke_certificate", {
+        category: "certificates",
         label: "Revoked certificate"
       });
     }
@@ -289,8 +288,8 @@ export const CertificateProvider = ({ children }) => {
 
       setSelectedCertificate(null);
 
-      event(AnalyticsEvents.REVOKE_ALL_CERTIFICATE, {
-        category: AnalyticsCategory.CERTIFICATES,
+      analyticsService.track("revoke_all_certificates", {
+        category: "certificates",
         label: "Revoked all certificates"
       });
     }

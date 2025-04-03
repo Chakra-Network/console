@@ -1,11 +1,11 @@
-import { ApiWalletOutput, ManagedWalletHttpService as ManagedWalletHttpServiceOriginal } from "@akashnetwork/http-sdk";
-import { AxiosRequestConfig } from "axios";
-import { event } from "nextjs-google-analytics";
+import type { ApiManagedWalletOutput, ApiWalletOutput } from "@akashnetwork/http-sdk";
+import { ManagedWalletHttpService as ManagedWalletHttpServiceOriginal } from "@akashnetwork/http-sdk";
+import type { AxiosRequestConfig } from "axios";
 
 import { browserEnvConfig } from "@src/config/browser-env.config";
+import { analyticsService } from "@src/services/analytics/analytics.service";
 import { browserApiUrlService } from "@src/services/api-url/browser-api-url.service";
 import { authService } from "@src/services/auth/auth.service";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
 
 class ManagedWalletHttpService extends ManagedWalletHttpServiceOriginal {
   private checkoutSessionId: string | null = null;
@@ -24,15 +24,17 @@ class ManagedWalletHttpService extends ManagedWalletHttpServiceOriginal {
     }
 
     if (query.get("payment-canceled") === "true") {
+      analyticsService.track("payment_cancelled", "Amplitude");
       this.clearSessionResults();
     }
 
     if (query.get("payment-success") === "true") {
+      analyticsService.track("payment_success", "Amplitude");
       this.checkoutSessionId = query.get("session_id");
     }
   }
 
-  async getWallet(userId: string) {
+  async getWallet(userId: string): Promise<ApiManagedWalletOutput> {
     const [wallet] = this.extractApiData(await this.get<ApiWalletOutput[]>("v1/wallets", { params: this.getWalletListParams(userId) }));
 
     this.clearSessionResults();
@@ -71,7 +73,7 @@ managedWalletHttpService.interceptors.request.use(authService.withAnonymousUserH
 
 managedWalletHttpService.interceptors.response.use(response => {
   if (response.config.url === "v1/start-trial" && response.config.method === "post" && response.status === 200) {
-    event(AnalyticsEvents.TRIAL_STARTED, { category: AnalyticsCategory.BILLING, label: "Trial Started" });
+    analyticsService.track("trial_started", { category: "billing", label: "Trial Started" });
   }
   return response;
 });

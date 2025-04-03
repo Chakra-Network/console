@@ -3,12 +3,9 @@ import axios from "axios";
 import minutesToSeconds from "date-fns/minutesToSeconds";
 
 import { cacheKeys, cacheResponse } from "@src/caching/helpers";
-import { Auditor, ProviderAttributesSchema } from "@src/types/provider";
-import { env } from "@src/utils/env";
+import type { Auditor, ProviderAttributesSchema } from "@src/types/provider";
 
-export function getOctokit() {
-  const githubPAT = env.GITHUB_PAT;
-
+export function getOctokit(githubPAT: string) {
   if (!githubPAT) {
     throw new Error("GITHUB_PAT is missing");
   }

@@ -1,7 +1,8 @@
 import { LoggerService } from "@akashnetwork/logging";
 import { z } from "zod";
 
-import { NewDeploymentContainer, NewDeploymentContainerProps } from "@src/components/new-deployment/NewDeploymentContainer";
+import type { NewDeploymentContainerProps } from "@src/components/new-deployment/NewDeploymentContainer";
+import { NewDeploymentContainer } from "@src/components/new-deployment/NewDeploymentContainer";
 import { withSdlBuilder } from "@src/context/SdlBuilderProvider/SdlBuilderProvider";
 import { getValidatedServerSideProps } from "@src/lib/nextjs/getValidatedServerSIdeProps";
 import { services } from "@src/services/http/http-server.service";
@@ -27,7 +28,7 @@ export const getServerSideProps = getValidatedServerSideProps<NewDeploymentConta
     if (template && query.templateId) {
       return { props: { template, templateId: query.templateId } };
     }
-  } catch (error) {
+  } catch (error: any) {
     if (error?.response?.status === 404) {
       logger.info(`Template not found: ${query.templateId}`);
     } else {

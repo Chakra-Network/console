@@ -1,4 +1,12 @@
-import { DepositDeploymentAuthorization, MsgCloseDeployment, MsgDepositDeployment } from "@akashnetwork/akash-api/v1beta3";
+import { GroupSpec } from "@akashnetwork/akash-api/akash/deployment/v1beta3";
+import {
+  DepositDeploymentAuthorization,
+  MsgCloseDeployment,
+  MsgCreateDeployment,
+  MsgCreateLease,
+  MsgDepositDeployment,
+  MsgUpdateDeployment
+} from "@akashnetwork/akash-api/v1beta3";
 import { MsgExec, MsgRevoke } from "cosmjs-types/cosmos/authz/v1beta1/tx";
 import { BasicAllowance } from "cosmjs-types/cosmos/feegrant/v1beta1/feegrant";
 import { MsgGrantAllowance } from "cosmjs-types/cosmos/feegrant/v1beta1/tx";
@@ -15,7 +23,7 @@ export interface SpendingAuthorizationMsgOptions {
 }
 
 interface DepositDeploymentMsgOptionsBase {
-  dseq: number;
+  dseq: number | string;
   amount: number;
   denom: string;
   owner: string;
@@ -27,6 +35,38 @@ export interface DepositDeploymentMsgOptions extends DepositDeploymentMsgOptions
 
 export interface ExecDepositDeploymentMsgOptions extends DepositDeploymentMsgOptionsBase {
   grantee: string;
+}
+
+export interface CreateDeploymentMsgOptions extends DepositDeploymentMsgOptionsBase {
+  groups: GroupSpec[];
+  manifestVersion: Uint8Array;
+  depositor: string;
+}
+
+export interface CreateLeaseMsgOptions {
+  owner: string;
+  dseq: number | string;
+  gseq: number;
+  oseq: number;
+  provider: string;
+}
+
+export interface UpdateDeploymentMsgOptions {
+  owner: string;
+  dseq: string;
+  version: Uint8Array;
+}
+
+export interface DepositDeploymentMsg {
+  typeUrl: "/akash.deployment.v1beta3.MsgDepositDeployment";
+  value: {
+    id: {
+      owner: string;
+      dseq: Long;
+    };
+    amount: { denom: string; amount: string };
+    depositor: string;
+  };
 }
 
 @singleton()
@@ -111,19 +151,53 @@ export class RpcMessageService {
     };
   }
 
-  getCloseDeploymentMsg(address: string, dseq: number) {
+  getCloseDeploymentMsg(address: string, dseq: number | string) {
     return {
       typeUrl: `/${MsgCloseDeployment.$type}`,
-      value: {
+      value: MsgCloseDeployment.fromPartial({
         id: {
           owner: address,
           dseq: Long.fromString(dseq.toString(), true)
         }
-      }
+      })
     };
   }
 
-  getDepositDeploymentMsg({ owner, dseq, amount, denom, depositor }: DepositDeploymentMsgOptions) {
+  getCreateDeploymentMsg({ owner, dseq, groups, manifestVersion, denom, amount, depositor }: CreateDeploymentMsgOptions) {
+    return {
+      typeUrl: `/akash.deployment.v1beta3.MsgCreateDeployment`,
+      value: MsgCreateDeployment.fromPartial({
+        id: {
+          owner,
+          dseq
+        },
+        groups,
+        version: manifestVersion,
+        deposit: {
+          denom,
+          amount: amount.toString()
+        },
+        depositor
+      })
+    };
+  }
+
+  getCreateLeaseMsg({ owner, dseq, gseq, oseq, provider }: CreateLeaseMsgOptions) {
+    return {
+      typeUrl: `/akash.market.v1beta4.MsgCreateLease`,
+      value: MsgCreateLease.fromPartial({
+        bidId: {
+          owner,
+          dseq: Long.fromString(dseq.toString(), true),
+          gseq,
+          oseq,
+          provider
+        }
+      })
+    };
+  }
+
+  getDepositDeploymentMsg({ owner, dseq, amount, denom, depositor }: DepositDeploymentMsgOptions): DepositDeploymentMsg {
     return {
       typeUrl: "/akash.deployment.v1beta3.MsgDepositDeployment",
       value: {
@@ -164,6 +238,30 @@ export class RpcMessageService {
           }
         ]
       }
+    };
+  }
+
+  getCreateCertificateMsg(address: string, crtpem: string, pubpem: string) {
+    return {
+      typeUrl: "/akash.cert.v1beta3.MsgCreateCertificate",
+      value: {
+        owner: address,
+        cert: Buffer.from(crtpem).toString("base64"),
+        pubkey: Buffer.from(pubpem).toString("base64")
+      }
+    };
+  }
+
+  getUpdateDeploymentMsg({ owner, dseq, version }: UpdateDeploymentMsgOptions) {
+    return {
+      typeUrl: `/akash.deployment.v1beta3.MsgUpdateDeployment`,
+      value: MsgUpdateDeployment.fromPartial({
+        id: {
+          owner,
+          dseq
+        },
+        version
+      })
     };
   }
 }

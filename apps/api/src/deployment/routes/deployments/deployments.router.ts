@@ -1,0 +1,169 @@
+import { createRoute } from "@hono/zod-openapi";
+import { container } from "tsyringe";
+
+import { OpenApiHonoHandler } from "@src/core/services/open-api-hono-handler/open-api-hono-handler";
+import { DeploymentController } from "@src/deployment/controllers/deployment/deployment.controller";
+import {
+  CloseDeploymentParamsSchema,
+  CloseDeploymentResponseSchema,
+  CreateDeploymentRequestSchema,
+  CreateDeploymentResponseSchema,
+  DepositDeploymentRequestSchema,
+  DepositDeploymentResponseSchema,
+  GetDeploymentQuerySchema,
+  GetDeploymentResponseSchema,
+  UpdateDeploymentRequestSchema,
+  UpdateDeploymentResponseSchema
+} from "@src/deployment/http-schemas/deployment.schema";
+
+const getRoute = createRoute({
+  method: "get",
+  path: "/v1/deployments",
+  summary: "Get a deployment",
+  tags: ["Deployments"],
+  request: {
+    query: GetDeploymentQuerySchema
+  },
+  responses: {
+    200: {
+      description: "Returns deployment info",
+      content: {
+        "application/json": {
+          schema: GetDeploymentResponseSchema
+        }
+      }
+    }
+  }
+});
+
+const postRoute = createRoute({
+  method: "post",
+  path: "/v1/deployments",
+  summary: "Create new deployment",
+  tags: ["Deployments"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: CreateDeploymentRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    201: {
+      description: "Create deployment successfully",
+      content: {
+        "application/json": {
+          schema: CreateDeploymentResponseSchema
+        }
+      }
+    }
+  }
+});
+
+const deleteRoute = createRoute({
+  method: "delete",
+  path: "/v1/deployments/{dseq}",
+  summary: "Close a deployment",
+  tags: ["Deployments"],
+  request: {
+    params: CloseDeploymentParamsSchema
+  },
+  responses: {
+    200: {
+      description: "Deployment closed successfully",
+      content: {
+        "application/json": {
+          schema: CloseDeploymentResponseSchema
+        }
+      }
+    }
+  }
+});
+
+const depositRoute = createRoute({
+  method: "post",
+  path: "/v1/deposit-deployment",
+  summary: "Deposit into a deployment",
+  tags: ["Deployments"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: DepositDeploymentRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: "Deposit successful",
+      content: {
+        "application/json": {
+          schema: DepositDeploymentResponseSchema
+        }
+      }
+    }
+  }
+});
+
+const updateRoute = createRoute({
+  method: "put",
+  path: "/v1/deployments/{dseq}",
+  summary: "Update a deployment",
+  tags: ["Deployments"],
+  request: {
+    params: CloseDeploymentParamsSchema,
+    body: {
+      content: {
+        "application/json": {
+          schema: UpdateDeploymentRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: "Deployment updated successfully",
+      content: {
+        "application/json": {
+          schema: UpdateDeploymentResponseSchema
+        }
+      }
+    }
+  }
+});
+
+export const deploymentsRouter = new OpenApiHonoHandler();
+
+deploymentsRouter.openapi(getRoute, async function routeGetDeployment(c) {
+  const { dseq, userId } = c.req.valid("query");
+  const result = await container.resolve(DeploymentController).findByDseqAndUserId(dseq, userId);
+  return c.json(result, 200);
+});
+
+deploymentsRouter.openapi(postRoute, async function routeCreateDeployment(c) {
+  const { data } = c.req.valid("json");
+  const result = await container.resolve(DeploymentController).create(data);
+  return c.json(result, 201);
+});
+
+deploymentsRouter.openapi(deleteRoute, async function routeCloseDeployment(c) {
+  const { dseq } = c.req.valid("param");
+  const result = await container.resolve(DeploymentController).close(dseq);
+  return c.json(result, 200);
+});
+
+deploymentsRouter.openapi(depositRoute, async function routeDepositDeployment(c) {
+  const { data } = c.req.valid("json");
+  const result = await container.resolve(DeploymentController).deposit(data);
+  return c.json(result, 200);
+});
+
+deploymentsRouter.openapi(updateRoute, async function routeUpdateDeployment(c) {
+  const { dseq } = c.req.valid("param");
+  const { data } = c.req.valid("json");
+  const result = await container.resolve(DeploymentController).update(dseq, data);
+  return c.json(result, 200);
+});

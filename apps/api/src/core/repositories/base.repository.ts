@@ -1,10 +1,11 @@
-import { AnyAbility } from "@casl/ability";
-import { and, DBQueryConfig, eq, inArray, sql } from "drizzle-orm";
-import { PgTableWithColumns } from "drizzle-orm/pg-core/table";
-import { SQL } from "drizzle-orm/sql/sql";
+import type { AnyAbility } from "@casl/ability";
+import type { DBQueryConfig } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import type { PgTableWithColumns } from "drizzle-orm/pg-core";
+import type { SQL } from "drizzle-orm/sql/sql";
 import first from "lodash/first";
 
-import { ApiPgDatabase, ApiPgTables, TxService } from "@src/core";
+import type { ApiPgDatabase, ApiPgTables, TxService } from "@src/core";
 import { DrizzleAbility } from "@src/lib/drizzle-ability/drizzle-ability";
 
 export type AbilityParams = [AnyAbility, Parameters<AnyAbility["can"]>[0]];
@@ -32,8 +33,8 @@ export abstract class BaseRepository<
     return this.txManager.getPgTx() || this.pg;
   }
 
-  get queryCursor() {
-    return this.cursor.query[this.tableName] as unknown as T;
+  get queryCursor(): T {
+    return this.cursor.query[this.tableName];
   }
 
   protected constructor(
@@ -41,7 +42,7 @@ export abstract class BaseRepository<
     protected readonly table: T,
     protected readonly txManager: TxService,
     protected readonly entityName: string,
-    protected readonly tableName: keyof ApiPgTables
+    protected readonly tableName: TableNameInSchema<T>
   ) {}
 
   protected withAbility(ability: AnyAbility, action: Parameters<AnyAbility["can"]>[0]) {
@@ -66,7 +67,7 @@ export abstract class BaseRepository<
   }
 
   async findOneBy(query?: Partial<Output>) {
-    return this.toOutput(
+    return await this.toOutput(
       await this.queryCursor.findFirst({
         where: this.queryToWhere(query)
       })
@@ -122,6 +123,16 @@ export abstract class BaseRepository<
   async updateById(id: Output["id"], payload: Partial<Input>): Promise<void>;
   async updateById(id: Output["id"], payload: Partial<Input>, options?: MutationOptions): Promise<void | Output> {
     return this.updateBy({ id } as Partial<Output>, payload, options);
+  }
+
+  async updateManyById(ids: Output["id"][], payload: Partial<Input>): Promise<void> {
+    await this.cursor
+      .update(this.table)
+      .set({
+        ...this.toInput(payload),
+        updated_at: sql`now()`
+      })
+      .where(inArray(this.table.id, ids));
   }
 
   async updateBy(query: Partial<Output>, payload: Partial<Input>, options?: MutationOptions): Promise<Output>;
@@ -184,3 +195,12 @@ export abstract class BaseRepository<
     return payload as Output;
   }
 }
+
+type TablesOnly<T> = {
+  [K in keyof T as T[K] extends PgTableWithColumns<any> ? K : never]: T[K];
+};
+
+type TableName<T extends PgTableWithColumns<any>> = T extends PgTableWithColumns<infer TableConfig> ? TableConfig["name"] : never;
+type TableNameInSchema<T extends PgTableWithColumns<any>> = {
+  [K in keyof TablesOnly<ApiPgTables> as TableName<ApiPgTables[K]>]: K;
+}[TableName<T>];

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { UAKT_DENOM } from "@src/config/denom.config";
 import { useChainParam } from "@src/context/ChainParamProvider";
@@ -32,26 +32,10 @@ export type WalletBalanceReturnType = {
 };
 
 export const useWalletBalance = (): WalletBalanceReturnType => {
-  const { isLoaded, price } = usePricing();
+  const { isLoaded, price, udenomToUsd } = usePricing();
   const { address, isManaged } = useWallet();
-  const usdcIbcDenom = useUsdcDenom();
   const { data: balances, isFetching: isLoadingBalances, refetch } = useBalances(address);
   const [walletBalance, setWalletBalance] = useState<WalletBalance | null>(null);
-
-  const udenomToUsd = useCallback(
-    (amount: string, denom: string) => {
-      let value = 0;
-
-      if (denom === UAKT_DENOM) {
-        value = uaktToAKT(parseFloat(amount), 6) * (price || 0);
-      } else if (denom === usdcIbcDenom) {
-        value = udenomToDenom(parseFloat(amount), 6);
-      }
-
-      return value;
-    },
-    [price, usdcIbcDenom]
-  );
 
   useEffect(() => {
     if (isLoaded && balances && price) {
@@ -99,7 +83,7 @@ type DenomData = {
   balance: number;
 };
 
-export const useDenomData = (denom: string) => {
+export const useDenomData = (denom?: string) => {
   const { isLoaded, price, aktToUSD } = usePricing();
   const { balance: walletBalance } = useWalletBalance();
   const [depositData, setDepositData] = useState<DenomData | null>(null);

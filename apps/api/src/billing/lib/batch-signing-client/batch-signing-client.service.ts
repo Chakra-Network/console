@@ -1,9 +1,9 @@
 import { LoggerService } from "@akashnetwork/logging";
 import { toHex } from "@cosmjs/encoding";
-import { EncodeObject, Registry } from "@cosmjs/proto-signing";
+import type { EncodeObject, Registry } from "@cosmjs/proto-signing";
 import { calculateFee, GasPrice } from "@cosmjs/stargate";
-import { IndexedTx } from "@cosmjs/stargate/build/stargateclient";
-import { BroadcastTxSyncResponse } from "@cosmjs/tendermint-rpc/build/comet38";
+import type { IndexedTx } from "@cosmjs/stargate/build/stargateclient";
+import type { BroadcastTxSyncResponse } from "@cosmjs/tendermint-rpc/build/comet38";
 import { Sema } from "async-sema";
 import { TxRaw } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import DataLoader from "dataloader";
@@ -11,8 +11,8 @@ import { backOff } from "exponential-backoff";
 import assert from "http-assert";
 
 import { SyncSigningStargateClient } from "@src/billing/lib/sync-signing-stargate-client/sync-signing-stargate-client";
-import { Wallet } from "@src/billing/lib/wallet/wallet";
-import { BillingConfigService } from "@src/billing/services/billing-config/billing-config.service";
+import type { Wallet } from "@src/billing/lib/wallet/wallet";
+import type { BillingConfigService } from "@src/billing/services/billing-config/billing-config.service";
 
 interface ShortAccountInfo {
   accountNumber: number;
@@ -64,18 +64,28 @@ export class BatchSigningClientService {
   }
 
   private async initClient() {
-    return SyncSigningStargateClient.connectWithSigner(this.config.get("RPC_NODE_ENDPOINT"), this.wallet, {
-      registry: this.registry
-    }).then(async client => {
-      this.chainId = await client.getChainId();
-      return client;
-    });
+    return await backOff(
+      () =>
+        SyncSigningStargateClient.connectWithSigner(this.config.get("RPC_NODE_ENDPOINT"), this.wallet, {
+          registry: this.registry
+        }).then(async client => {
+          this.chainId = await client.getChainId();
+          return client;
+        }),
+      {
+        maxDelay: 15000,
+        startingDelay: 500,
+        timeMultiple: 2,
+        numOfAttempts: 7,
+        jitter: "full"
+      }
+    );
   }
 
   async executeTx(messages: readonly EncodeObject[], options?: ExecuteTxOptions) {
     const tx = await this.execTxLoader.load({ messages, options });
 
-    assert(tx.code === 0, 500, "Failed to sign and broadcast tx", { data: tx });
+    assert(tx?.code === 0, 500, "Failed to sign and broadcast tx", { data: tx });
 
     return tx;
   }
@@ -84,9 +94,11 @@ export class BatchSigningClientService {
     await this.semaphore.acquire();
     try {
       return await backOff(() => this.executeTxBatch(inputs), {
-        maxDelay: 5000,
-        numOfAttempts: 3,
-        jitter: "full",
+        maxDelay: 10000,
+        startingDelay: 1000,
+        timeMultiple: 2,
+        numOfAttempts: 5,
+        jitter: "none",
         retry: async (error: Error, attempt) => {
           const isSequenceMismatch = error?.message?.includes("account sequence mismatch");
 
@@ -162,7 +174,7 @@ export class BatchSigningClientService {
     const gasEstimation = await this.simulate(messages, "");
     const estimatedGas = Math.round(gasEstimation * this.config.get("GAS_SAFETY_MULTIPLIER"));
 
-    const fee = calculateFee(estimatedGas, GasPrice.fromString(`0.025${denom}`));
+    const fee = calculateFee(estimatedGas, GasPrice.fromString(`${this.config.get("AVERAGE_GAS_PRICE")}${denom}`));
 
     return granter ? { ...fee, granter } : fee;
   }

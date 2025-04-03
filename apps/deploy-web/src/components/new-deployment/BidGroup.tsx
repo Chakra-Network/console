@@ -5,8 +5,8 @@ import { Alert, Table, TableBody, TableCell, TableHeader, TableRow } from "@akas
 import { Check } from "iconoir-react";
 
 import networkStore from "@src/store/networkStore";
-import { BidDto, DeploymentDto } from "@src/types/deployment";
-import { ApiProviderList } from "@src/types/provider";
+import type { BidDto, DeploymentDto } from "@src/types/deployment";
+import type { ApiProviderList } from "@src/types/provider";
 import { deploymentGroupResourceSum, getStorageAmount } from "@src/utils/deploymentDetailUtils";
 import { FormPaper } from "../sdl/FormPaper";
 import { LabelValueOld } from "../shared/LabelValueOld";
@@ -53,7 +53,7 @@ export const BidGroup: React.FunctionComponent<Props> = ({
     if (currentGroup) {
       const resourcesSum = {
         cpuAmount: deploymentGroupResourceSum(currentGroup, r => parseInt(r.cpu.units.val) / 1000),
-        gpuAmount: deploymentGroupResourceSum(currentGroup, r => parseInt(r.gpu?.units?.val || 0)),
+        gpuAmount: deploymentGroupResourceSum(currentGroup, r => parseInt(r.gpu?.units?.val || "0")),
         memoryAmount: deploymentGroupResourceSum(currentGroup, r => parseInt(r.memory.quantity.val)),
         storageAmount: deploymentGroupResourceSum(currentGroup, r => getStorageAmount(r))
       };
@@ -102,7 +102,7 @@ export const BidGroup: React.FunctionComponent<Props> = ({
             <TableCell width="10%" align="center">
               Uptime (7d)
             </TableCell>
-            <TableCell width="10%" align="center">
+            <TableCell width="20%" align="center">
               Provider
             </TableCell>
             {(deploymentDetail?.gpuAmount || 0) > 0 && (
@@ -110,10 +110,10 @@ export const BidGroup: React.FunctionComponent<Props> = ({
                 GPU
               </TableCell>
             )}
-            <TableCell width="10%" align="center">
+            <TableCell width="5%" align="center">
               Audited
             </TableCell>
-            <TableCell width="10%" align="center">
+            <TableCell width="5%" align="center">
               <strong>Select</strong>
             </TableCell>
           </TableRow>

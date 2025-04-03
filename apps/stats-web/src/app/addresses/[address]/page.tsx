@@ -12,12 +12,11 @@ import { Title } from "@/components/Title";
 import { networkId } from "@/config/env-config.schema";
 import { UrlService } from "@/lib/urlUtils";
 import { serverApiUrlService } from "@/services/api-url/server-api-url.service";
-import { AddressDetail } from "@/types";
+import type { AddressDetail } from "@/types";
 
 const AddressDetailPageSchema = z.object({
   params: z.object({
-    address: z.string(),
-    dseq: z.string()
+    address: z.string()
   }),
   searchParams: z.object({
     network: networkId

@@ -1,5 +1,7 @@
-import React, { FC, useCallback, useEffect, useMemo } from "react";
-import { Controller, SubmitHandler, useForm } from "react-hook-form";
+import type { FC } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
+import type { SubmitHandler } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Button, Form, FormField, FormInput } from "@akashnetwork/ui/components";
 import { zodResolver } from "@hookform/resolvers/zod";
 import addYears from "date-fns/addYears";
@@ -127,8 +129,9 @@ export const AutoTopUpSetting: FC<AutoTopUpSettingProps> = ({ onSubmit, expirati
   }, [expiration]);
 
   const execSubmitterRoleAction: SubmitHandler<FormValues> = useCallback(
-    async (next: FormValues, event: React.BaseSyntheticEvent<SubmitEvent>) => {
-      const role = event.nativeEvent.submitter?.getAttribute("data-role");
+    async (next, event) => {
+      const nativeEvent = (event as React.BaseSyntheticEvent<SubmitEvent> | undefined)?.nativeEvent;
+      const role = nativeEvent?.submitter?.getAttribute("data-role");
       await onSubmit(role as "revoke-all" | "update", convertToUakt(next));
       reset(next);
     },

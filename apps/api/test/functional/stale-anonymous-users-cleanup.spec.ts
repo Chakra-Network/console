@@ -3,18 +3,17 @@ import subDays from "date-fns/subDays";
 import { container } from "tsyringe";
 
 import { app } from "@src/app";
+import { AuthInterceptor } from "@src/auth/services/auth.interceptor";
 import { resolveWallet } from "@src/billing/providers/wallet.provider";
 import { UserWalletRepository } from "@src/billing/repositories";
 import { UserController } from "@src/user/controllers/user/user.controller";
 import { UserRepository } from "@src/user/repositories";
 
-import { DbTestingService } from "@test/services/db-testing.service";
 import { WalletTestingService } from "@test/services/wallet-testing.service";
 
-jest.setTimeout(100000);
+jest.setTimeout(120000);
 
 describe("Users", () => {
-  const dbService = container.resolve(DbTestingService);
   const userRepository = container.resolve(UserRepository);
   const userWalletRepository = container.resolve(UserWalletRepository);
   const walletService = new WalletTestingService(app);
@@ -25,10 +24,6 @@ describe("Users", () => {
 
   beforeAll(async () => {
     masterAddress = await masterWalletService.getFirstAddress();
-  });
-
-  afterEach(async () => {
-    await dbService.cleanAll();
   });
 
   describe("stale anonymous users cleanup", () => {
@@ -43,6 +38,7 @@ describe("Users", () => {
       ]);
 
       const staleParams = { lastActiveAt: subDays(new Date(), 91) };
+      container.resolve(AuthInterceptor).clearLastUserActivityCache();
       await Promise.all([
         ...staleUsers.map(user => userRepository.updateById(user.user.id, staleParams)),
         userRepository.updateById(staleNoWallet.user.id, staleParams),

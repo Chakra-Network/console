@@ -1,9 +1,11 @@
-import { MouseEventHandler, useCallback } from "react";
+import type { MouseEventHandler } from "react";
+import { useCallback } from "react";
 import { Snackbar } from "@akashnetwork/ui/components";
 import { usePopup } from "@akashnetwork/ui/context";
 import { useSnackbar } from "notistack";
 
 import { useCustomUser } from "@src/hooks/useCustomUser";
+import { analyticsService } from "@src/services/analytics/analytics.service";
 import { services } from "@src/services/http/http-browser.service";
 
 export const useEmailVerificationRequiredEventHandler = (): ((messageOtherwise: string) => (callback: MouseEventHandler) => MouseEventHandler) => {
@@ -23,6 +25,7 @@ export const useEmailVerificationRequiredEventHandler = (): ((messageOtherwise: 
               side: "left",
               size: "lg",
               onClick: () => {
+                analyticsService.track("resend_verification_email_btn_clk", "Amplitude");
                 if (!user?.id) {
                   return;
                 }
@@ -51,6 +54,6 @@ export const useEmailVerificationRequiredEventHandler = (): ((messageOtherwise: 
 
       return user?.emailVerified ? handler : preventer;
     },
-    [user?.emailVerified, user.id, requireAction, enqueueSnackbar]
+    [user?.emailVerified, user?.id, requireAction, enqueueSnackbar]
   );
 };

@@ -1,5 +1,6 @@
 "use client";
-import React, { ReactNode } from "react";
+import type { ReactNode } from "react";
+import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { ErrorFallback, Tabs, TabsList, TabsTrigger } from "@akashnetwork/ui/components";
 import { cn } from "@akashnetwork/ui/utils";
@@ -23,8 +24,8 @@ type Props = {
 export const SettingsLayout: React.FunctionComponent<Props> = ({ children, page, title, headerActions }) => {
   const router = useRouter();
 
-  const handleTabChange = (newValue: SettingsTabs) => {
-    switch (newValue) {
+  const handleTabChange = (newValue: string) => {
+    switch (newValue as SettingsTabs) {
       case SettingsTabs.AUTHORIZATIONS:
         router.push(UrlService.settingsAuthorizations());
         break;

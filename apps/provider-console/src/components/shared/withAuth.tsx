@@ -15,56 +15,63 @@ export const withAuth = ({ WrappedComponent, authLevel = "wallet" }: WithAuthPro
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [loadingMessage, setLoadingMessage] = useState("Checking wallet connection...");
+    const [walletCheckCount, setWalletCheckCount] = useState(0);
 
     useEffect(() => {
-      if (authLevel === "wallet") {
+      let isMounted = true;
+
+      const checkAuth = async () => {
+        if (!isMounted) return;
+
         if (!isWalletConnected) {
-          setLoadingMessage("Connecting to wallet...");
-          router.push("/");
+          if (walletCheckCount >= 3) {
+            setLoadingMessage("Wallet not connected, redirecting to home page...");
+            setTimeout(() => {
+              if (isMounted) router.push("/");
+            }, 2000);
+            return;
+          }
+
+          setWalletCheckCount(prev => prev + 1);
+          setLoadingMessage("Checking wallet connection...");
           return;
         }
-        setLoading(false);
-      }
 
-      if (authLevel === "provider") {
-        if (!isWalletConnected) {
-          setLoadingMessage("Connecting to wallet...");
-          router.push("/");
+        // Reset wallet check count when wallet is connected
+        if (walletCheckCount > 0) {
+          setWalletCheckCount(0);
+        }
+
+        if (authLevel === "wallet") {
+          setLoading(false);
           return;
         }
 
-        if (!isProviderStatusFetched) {
+        if (!isProviderStatusFetched || (authLevel === "onlineProvider" && !isProviderOnlineStatusFetched)) {
           setLoadingMessage("Checking provider status...");
           return;
         }
 
-        if (!isProvider) {
-          router.push("/");
+        const isAuthorized = authLevel === "provider" ? isProvider : isProvider || isOnline;
+
+        if (!isAuthorized) {
+          const message = authLevel === "provider" ? "Not a provider, redirecting to home page..." : "Provider is offline, redirecting to home page...";
+          setLoadingMessage(message);
+          setTimeout(() => {
+            if (isMounted) router.push("/");
+          }, 2000);
           return;
         }
 
         setLoading(false);
-      }
+      };
 
-      if (authLevel === "onlineProvider") {
-        if (!isWalletConnected) {
-          setLoadingMessage("Wallet not connected, redirecting to home page...");
-          router.push("/");
-          return;
-        }
+      checkAuth();
 
-        if (!isProviderStatusFetched || !isProviderOnlineStatusFetched) {
-          setLoadingMessage("Checking provider status...");
-          return;
-        }
-
-        if (!isProvider && !isOnline) {
-          router.push("/");
-          return;
-        }
-        setLoading(false);
-      }
-    }, [isWalletConnected, isProvider, isProviderStatusFetched, isProviderOnlineStatusFetched, router, authLevel]);
+      return () => {
+        isMounted = false;
+      };
+    }, [isWalletConnected, isProvider, isProviderStatusFetched, isProviderOnlineStatusFetched, isOnline, router, walletCheckCount]);
 
     if (loading) {
       return (
@@ -76,7 +83,7 @@ export const withAuth = ({ WrappedComponent, authLevel = "wallet" }: WithAuthPro
             alignItems: "center",
             height: "100vh",
             fontSize: "18px",
-            color: "#333"
+            color: "var(--text-color, currentColor)"
           }}
         >
           <Spinner />

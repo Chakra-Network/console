@@ -1,15 +1,17 @@
-import { QueryKey, useQuery, UseQueryOptions } from "react-query";
+import type { QueryKey, UseQueryOptions } from "react-query";
+import { useQuery } from "react-query";
 import axios from "axios";
 import { z } from "zod";
 
 import { useLocalNotes } from "@src/context/LocalNoteProvider";
-import { PaginatedResults } from "@src/types";
-import { RpcDeployment } from "@src/types/deployment";
+import type { PaginatedResults } from "@src/types";
+import type { DeploymentDto, RpcDeployment } from "@src/types/deployment";
 import { ApiUrlService, loadWithPagination } from "@src/utils/apiUtils";
 import { deploymentToDto } from "@src/utils/deploymentDetailUtils";
 import { coinToUDenom } from "@src/utils/priceUtils";
 import { removeEmptyFilters } from "@src/utils/urlUtils";
-import { deploymentRowSchema, DeploymentRowType } from "@src/utils/zod/deploymentRow";
+import type { DeploymentRowType } from "@src/utils/zod/deploymentRow";
+import { deploymentRowSchema } from "@src/utils/zod/deploymentRow";
 import { useSettings } from "../context/SettingsProvider";
 import { QueryKeys } from "./queryKeys";
 
@@ -22,23 +24,23 @@ async function getDeploymentList(apiEndpoint: string, address: string) {
   return deployments.map(d => deploymentToDto(d));
 }
 
-export function useDeploymentList(address: string, options) {
+export function useDeploymentList(address: string, options: UseQueryOptions<DeploymentDto[] | null>) {
   const { settings } = useSettings();
-  return useQuery(QueryKeys.getDeploymentListKey(address), () => getDeploymentList(settings.apiEndpoint, address), options);
+  return useQuery(QueryKeys.getDeploymentListKey(address) as QueryKey, () => getDeploymentList(settings.apiEndpoint, address), options);
 }
 
 // Deployment detail
 async function getDeploymentDetail(apiEndpoint: string, address: string, dseq: string) {
-  if (!address) return null;
+  if (!address || !apiEndpoint) return null;
 
   const response = await axios.get(ApiUrlService.deploymentDetail(apiEndpoint, address, dseq));
 
   return deploymentToDto(response.data);
 }
 
-export function useDeploymentDetail(address: string, dseq: string, options) {
+export function useDeploymentDetail(address: string, dseq: string, options: UseQueryOptions<DeploymentDto | null>) {
   const { settings } = useSettings();
-  return useQuery(QueryKeys.getDeploymentDetailKey(address, dseq), () => getDeploymentDetail(settings.apiEndpoint, address, dseq), options);
+  return useQuery(QueryKeys.getDeploymentDetailKey(address, dseq) as QueryKey, () => getDeploymentDetail(settings.apiEndpoint, address, dseq), options);
 }
 
 async function getAddressDeployments(

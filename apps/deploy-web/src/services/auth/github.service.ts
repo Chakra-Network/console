@@ -1,4 +1,5 @@
-import axios, { AxiosResponse } from "axios";
+import type { AxiosResponse } from "axios";
+import axios from "axios";
 
 class GitHubAuth {
   private tokenUrl: string;
@@ -25,7 +26,7 @@ class GitHubAuth {
       const params = new URLSearchParams(response.data);
       const accessToken = params.get("access_token");
       return accessToken as string;
-    } catch (error) {
+    } catch (error: any) {
       throw new Error(error);
     }
   }

@@ -1,48 +1,52 @@
 "use client";
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { certificateManager } from "@akashnetwork/akashjs/build/certificates/certificate-manager";
-import { Alert, Button, CustomTooltip, FileButton, Input, Snackbar, Spinner } from "@akashnetwork/ui/components";
+import { Alert, AlertDescription, Button, CustomTooltip, FileButton, Input, Snackbar, Spinner } from "@akashnetwork/ui/components";
 import { cn } from "@akashnetwork/ui/utils";
-import { EncodeObject } from "@cosmjs/proto-signing";
+import type { EncodeObject } from "@cosmjs/proto-signing";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { ArrowRight, InfoCircle, Upload } from "iconoir-react";
 import { useAtom } from "jotai";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { event } from "nextjs-google-analytics";
 import { useSnackbar } from "notistack";
 
 import { browserEnvConfig } from "@src/config/browser-env.config";
 import { useCertificate } from "@src/context/CertificateProvider";
-import { useChainParam } from "@src/context/ChainParamProvider";
 import { useSdlBuilder } from "@src/context/SdlBuilderProvider/SdlBuilderProvider";
 import { useWallet } from "@src/context/WalletProvider";
-import { useManagedDeploymentConfirm } from "@src/hooks/useManagedDeploymentConfirm";
+import { useImportSimpleSdl } from "@src/hooks/useImportSimpleSdl";
 import { useManagedWalletDenom } from "@src/hooks/useManagedWalletDenom";
 import { useWhen } from "@src/hooks/useWhen";
+import { useDeploymentList } from "@src/queries/useDeploymentQuery";
 import { useDepositParams } from "@src/queries/useSettings";
+import { analyticsService } from "@src/services/analytics/analytics.service";
 import sdlStore from "@src/store/sdlStore";
-import { TemplateCreation } from "@src/types";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
+import type { TemplateCreation } from "@src/types";
 import type { DepositParams } from "@src/types/deployment";
 import { RouteStep } from "@src/types/route-steps.type";
 import { deploymentData } from "@src/utils/deploymentData";
-import { appendTrialAttribute } from "@src/utils/deploymentData/v1beta3";
+import { appendTrialAttribute, TRIAL_ATTRIBUTE, TRIAL_REGISTERED_ATTRIBUTE } from "@src/utils/deploymentData/v1beta3";
 import { saveDeploymentManifestAndName } from "@src/utils/deploymentLocalDataUtils";
 import { validateDeploymentData } from "@src/utils/deploymentUtils";
-import { importSimpleSdl } from "@src/utils/sdl/sdlImport";
 import { Timer } from "@src/utils/timer";
 import { TransactionMessageData } from "@src/utils/TransactionMessageData";
 import { domainName, handleDocClick, UrlService } from "@src/utils/urlUtils";
 import { updateWallet } from "@src/utils/walletUtils";
 import { useSettings } from "../../context/SettingsProvider";
 import { DeploymentDepositModal } from "../deployments/DeploymentDepositModal";
+import { DeploymentMinimumEscrowAlertText } from "../sdl/DeploymentMinimumEscrowAlertText";
 import { CustomNextSeo } from "../shared/CustomNextSeo";
 import { DynamicMonacoEditor } from "../shared/DynamicMonacoEditor";
 import { LinkTo } from "../shared/LinkTo";
 import { PrerequisiteList } from "../shared/PrerequisiteList";
 import ViewPanel from "../shared/ViewPanel";
-import { SdlBuilder, SdlBuilderRefType } from "./SdlBuilder";
+import type { SdlBuilderRefType } from "./SdlBuilder";
+import { SdlBuilder } from "./SdlBuilder";
+
+const TRIAL_DEPLOYMENT_LIMIT = 5;
 
 type Props = {
   onTemplateSelected: Dispatch<TemplateCreation | null>;
@@ -67,15 +71,15 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
   const [selectedSdlEditMode, setSelectedSdlEditMode] = useAtom(sdlStore.selectedSdlEditMode);
   const [isRepoInputValid, setIsRepoInputValid] = useState(false);
   const [sdlDenom, setSdlDenom] = useState("uakt");
+
   const { settings } = useSettings();
-  const { address, signAndBroadcastTx, isManaged, isTrialing } = useWallet();
+  const { address, signAndBroadcastTx, isManaged, isTrialing, isOnboarding } = useWallet();
   const router = useRouter();
   const { loadValidCertificates, localCert, isLocalCertMatching, loadLocalCert, setSelectedCertificate } = useCertificate();
   const [, setDeploySdl] = useAtom(sdlStore.deploySdl);
   const muiTheme = useMuiTheme();
   const smallScreen = useMediaQuery(muiTheme.breakpoints.down("md"));
   const sdlBuilderRef = useRef<SdlBuilderRefType>(null);
-  const { minDeposit } = useChainParam();
   const { hasComponent } = useSdlBuilder();
   const searchParams = useSearchParams();
   const templateId = searchParams.get("templateId");
@@ -83,8 +87,8 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
   const defaultDeposit = depositParams || browserEnvConfig.NEXT_PUBLIC_DEFAULT_INITIAL_DEPOSIT;
   const wallet = useWallet();
   const managedDenom = useManagedWalletDenom();
-  const { createDeploymentConfirm } = useManagedDeploymentConfirm();
   const { enqueueSnackbar } = useSnackbar();
+  const services = useImportSimpleSdl(editedManifest);
 
   useWhen(
     wallet.isManaged && sdlDenom === "uakt" && editedManifest,
@@ -140,13 +144,14 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
       });
       setEditedManifest(event.target?.result as string);
       setSelectedSdlEditMode("yaml");
+      analyticsService.track("sdl_uploaded", "Amplitude");
     };
 
     reader.readAsText(file);
   };
 
-  async function handleTextChange(value) {
-    setEditedManifest(value);
+  async function handleTextChange(value: string | undefined) {
+    setEditedManifest(value || "");
   }
 
   async function createAndValidateDeploymentData(
@@ -166,7 +171,7 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
       setParsingError(null);
 
       return dd;
-    } catch (err) {
+    } catch (err: any) {
       if (err.name === "YAMLException" || err.name === "CustomValidationError") {
         setParsingError(err.message);
       } else if (err.name === "TemplateValidation") {
@@ -179,6 +184,8 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
   }
 
   const handleCreateDeployment = async () => {
+    analyticsService.track("create_deployment_btn_clk", "Amplitude");
+
     if (isGitProviderTemplate && !isRepoInputValid) {
       enqueueSnackbar(<Snackbar title={"Please Fill All Required Fields"} subTitle="You need fill repo url and branch to deploy" iconVariant="error" />, {
         variant: "error"
@@ -192,18 +199,12 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
     }
 
     if (isManaged) {
-      const services = importSimpleSdl(editedManifest as string);
-
-      if (!services) {
+      if (!services || services?.length === 0) {
         setParsingError("Error while parsing SDL file");
         return;
       }
 
-      const isConfirmed = await createDeploymentConfirm(services);
-
-      if (isConfirmed) {
-        await handleCreateClick(defaultDeposit, browserEnvConfig.NEXT_PUBLIC_MASTER_WALLET_ADDRESS);
-      }
+      setIsDepositingDeployment(true);
     } else {
       setIsCheckingPrerequisites(true);
     }
@@ -234,8 +235,10 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
         return;
       }
 
-      if (isTrialing) {
-        sdl = appendTrialAttribute(sdl);
+      if (isTrialing && !isOnboarding) {
+        sdl = appendTrialAttribute(sdl, TRIAL_ATTRIBUTE);
+      } else if (isOnboarding) {
+        sdl = appendTrialAttribute(sdl, TRIAL_REGISTERED_ATTRIBUTE);
       }
 
       const dd = await createAndValidateDeploymentData(sdl, null, deposit, depositorAddress);
@@ -275,7 +278,7 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
           });
           const validCerts = await loadValidCertificates();
           loadLocalCert();
-          const currentCert = validCerts.find(x => x.parsed === _crtpem);
+          const currentCert = validCerts.find(x => x.parsed === _crtpem) || null;
           setSelectedCertificate(currentCert);
         }
 
@@ -285,8 +288,8 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
         saveDeploymentManifestAndName(dd.deploymentId.dseq, sdl, dd.version, address, deploymentName);
         router.replace(UrlService.newDeployment({ step: RouteStep.createLeases, dseq: dd.deploymentId.dseq }));
 
-        event(AnalyticsEvents.CREATE_DEPLOYMENT, {
-          category: AnalyticsCategory.DEPLOYMENTS,
+        analyticsService.track("create_deployment", {
+          category: "deployments",
           label: "Create deployment in wizard"
         });
       } else {
@@ -315,9 +318,34 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
     setSelectedSdlEditMode(mode);
   };
 
+  const { data: deployments } = useDeploymentList(address, {});
+  const trialDeploymentLimitReached = useMemo(() => {
+    return isTrialing && (deployments?.length || 0) >= TRIAL_DEPLOYMENT_LIMIT;
+  }, [deployments?.length, isTrialing]);
+
   return (
     <>
       <CustomNextSeo title="Create Deployment - Manifest Edit" url={`${domainName}${UrlService.newDeployment({ step: RouteStep.editDeployment })}`} />
+
+      {trialDeploymentLimitReached && (
+        <div className="pb-4 pt-4">
+          <Alert variant="warning" className="backdrop-blur-md md:mb-0">
+            <AlertDescription className="space-y-1 dark:text-white/90">
+              <p>
+                You have reached the limit of {TRIAL_DEPLOYMENT_LIMIT} trial deployments.{" "}
+                <Link href={UrlService.login()} className="font-bold underline">
+                  Sign in
+                </Link>{" "}
+                or{" "}
+                <Link href={UrlService.signup()} className="font-bold underline">
+                  Sign up
+                </Link>{" "}
+                to add funds and continue deploying.
+              </p>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
 
       <div className="mb-2 pt-4">
         <div className="mb-2 flex flex-col items-end justify-between md:flex-row">
@@ -343,7 +371,7 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
             <div className="flex-grow">
               <Button
                 variant="default"
-                disabled={isCreatingDeployment || !!parsingError || !editedManifest}
+                disabled={trialDeploymentLimitReached || isCreatingDeployment || !!parsingError || !editedManifest}
                 onClick={() => handleCreateDeployment()}
                 className="w-full whitespace-nowrap sm:w-auto"
                 data-testid="create-deployment-btn"
@@ -370,7 +398,10 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
             <div className="flex items-center">
               <Button
                 variant={selectedSdlEditMode === "builder" ? "default" : "outline"}
-                onClick={() => changeMode("builder")}
+                onClick={() => {
+                  changeMode("builder");
+                  analyticsService.track("builder_mode_btn_clk", "Amplitude");
+                }}
                 size="sm"
                 className={cn("flex-grow sm:flex-grow-0", { "rounded-e-none": hasComponent("yml-editor") })}
                 disabled={!!parsingError && selectedSdlEditMode === "yaml"}
@@ -380,7 +411,10 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
               <Button
                 variant={selectedSdlEditMode === "yaml" ? "default" : "outline"}
                 color={selectedSdlEditMode === "yaml" ? "secondary" : "primary"}
-                onClick={() => changeMode("yaml")}
+                onClick={() => {
+                  changeMode("yaml");
+                  analyticsService.track("yml_mode_btn_clk", "Amplitude");
+                }}
                 size="sm"
                 className="flex-grow rounded-s-none sm:flex-grow-0"
               >
@@ -429,14 +463,16 @@ export const ManifestEdit: React.FunctionComponent<Props> = ({
           handleCancel={() => setIsDepositingDeployment(false)}
           onDeploymentDeposit={onDeploymentDeposit}
           denom={sdlDenom}
+          title="Confirm deployment creation?"
           infoText={
             <Alert className="mb-4 text-xs" variant="default">
-              To create a deployment, you need to have at least <b>{minDeposit.akt} AKT</b> or <b>{minDeposit.usdc} USDC</b> in an escrow account.{" "}
-              <LinkTo onClick={ev => handleDocClick(ev, "https://akash.network/docs/other-resources/payments/")}>
+              <DeploymentMinimumEscrowAlertText />
+              <LinkTo onClick={ev => handleDocClick(ev, "https://akash.network/docs/getting-started/intro-to-akash/payments/#escrow-accounts")}>
                 <strong>Learn more.</strong>
               </LinkTo>
             </Alert>
           }
+          services={services}
         />
       )}
       {isCheckingPrerequisites && <PrerequisiteList onClose={() => setIsCheckingPrerequisites(false)} onContinue={onPrerequisiteContinue} />}

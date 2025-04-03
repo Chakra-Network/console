@@ -31,7 +31,7 @@ import { useDeploymentList } from "@src/queries/useDeploymentQuery";
 import { useProviderList } from "@src/queries/useProvidersQuery";
 import sdlStore from "@src/store/sdlStore";
 import walletStore from "@src/store/walletStore";
-import { DeploymentDto, NamedDeploymentDto } from "@src/types/deployment";
+import type { DeploymentDto, NamedDeploymentDto } from "@src/types/deployment";
 import { TransactionMessageData } from "@src/utils/TransactionMessageData";
 import { UrlService } from "@src/utils/urlUtils";
 import Layout from "../layout/Layout";
@@ -96,21 +96,21 @@ export const DeploymentList: React.FunctionComponent = () => {
     }
   }, [deployments, search, getDeploymentName, isFilteringActive]);
 
-  const handleChangePage = newPage => {
+  const handleChangePage = (newPage: number) => {
     setPageIndex(newPage);
   };
 
-  const onIsFilteringActiveClick = value => {
+  const onIsFilteringActiveClick = (value: boolean) => {
     setPageIndex(0);
     setIsFilteringActive(value);
   };
 
-  const onSearchChange = event => {
+  const onSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setSearch(value);
   };
 
-  const onSelectDeployment = (checked, dseq) => {
+  const onSelectDeployment = (checked: boolean, dseq: string) => {
     setSelectedDeploymentDseqs(prev => {
       return checked ? prev.concat([dseq]) : prev.filter(x => x !== dseq);
     });
@@ -258,16 +258,23 @@ export const DeploymentList: React.FunctionComponent = () => {
         )}
 
         {currentPageDeployments?.length > 0 && (
-          <Table>
+          <Table className="min-w-[1024px] table-fixed">
+            <colgroup>
+              <col width="120" />
+              <col />
+              <col width="15%" />
+              <col width="20%" />
+              <col width="25%" />
+              <col width="130px" />
+            </colgroup>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[10%] text-center">Specs</TableHead>
-                <TableHead className="w-[20%] text-center">Name</TableHead>
-                <TableHead className="w-[10%] text-center">Time left</TableHead>
-                <TableHead className="w-[10%] text-center">Balance</TableHead>
-                <TableHead className="w-[15%] text-center">Cost</TableHead>
-                <TableHead className="w-[15%] text-center">Leases</TableHead>
-                <TableHead className="w-[10%]"></TableHead>
+                <TableHead className="text-center">Specs</TableHead>
+                <TableHead className="text-center">Name</TableHead>
+                <TableHead className="text-center">DSEQ</TableHead>
+                <TableHead className="text-center">Cost and balance</TableHead>
+                <TableHead className="text-center">Leases</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
 
@@ -280,7 +287,7 @@ export const DeploymentList: React.FunctionComponent = () => {
                   providers={providers}
                   isSelectable
                   onSelectDeployment={onSelectDeployment}
-                  checked={selectedDeploymentDseqs.some(x => x === deployment.dseq)}
+                  checked={selectedDeploymentDseqs.includes(deployment.dseq)}
                 />
               ))}
             </TableBody>

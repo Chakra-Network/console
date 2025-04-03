@@ -1,18 +1,16 @@
 import { getConnInfo } from "@hono/node-server/conninfo";
 import crypto from "crypto";
-import { Context, Next } from "hono";
+import type { Context, Next } from "hono";
 import { createMiddleware } from "hono/factory";
 
 import { getSentry } from "@src/core/providers/sentry.provider";
 
 export type ClientInfoContextVariables = {
-  clientInfo:
-    | {
-        ip: string;
-        userAgent: string | undefined;
-        fingerprint: string | undefined;
-      }
-    | undefined;
+  clientInfo?: {
+    ip: string;
+    userAgent: string | undefined;
+    fingerprint: string | undefined;
+  };
 };
 
 export const clientInfoMiddleware = createMiddleware<{

@@ -1,4 +1,4 @@
-import { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 
 import { serverEnvConfig } from "@src/config/server-env.config";
 import BitbucketAuth from "@src/services/auth/bitbucket.service";
@@ -21,7 +21,7 @@ export default async function exchangeBitBucketCodeForTokensHandler(req: NextApi
   try {
     const tokens = await bitbucketAuth.exchangeAuthorizationCodeForTokens(code);
     res.status(200).json(tokens);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).send({
       error: error.response?.data?.error,
       message: error.response?.data?.error_description

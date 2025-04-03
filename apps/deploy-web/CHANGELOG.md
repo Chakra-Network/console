@@ -1,5 +1,456 @@
 
 
+## [2.66.0](https://github.com/akash-network/console/compare/console-web/v2.65.1...console-web/v2.66.0) (2025-04-02)
+
+
+### Features
+
+* dynamic amount of storages ([411aa68](https://github.com/akash-network/console/commit/411aa68273926d51eec4511929e17e09baae4b7a)), closes [#175](https://github.com/akash-network/console/issues/175)
+
+## [2.65.1](https://github.com/akash-network/console/compare/console-web/v2.65.0...console-web/v2.65.1) (2025-04-01)
+
+
+### Bug Fixes
+
+* **deployment:** append trial attribute for anon only ([#1155](https://github.com/akash-network/console/issues/1155)) ([814e154](https://github.com/akash-network/console/commit/814e154a4bcaaea74507a87a3af3c9a628154835))
+
+## [2.65.0](https://github.com/akash-network/console/compare/console-web/v2.64.0...console-web/v2.65.0) (2025-03-31)
+
+
+### Features
+
+* **deployment:** managed wallet api update deployment ([#1093](https://github.com/akash-network/console/issues/1093)) ([6998834](https://github.com/akash-network/console/commit/699883436cc1763a20f65cce17390403107b179a))
+* show a popup on start trial ([#1116](https://github.com/akash-network/console/issues/1116)) ([fdee6e6](https://github.com/akash-network/console/commit/fdee6e6148a4b14d857aeb91f1612a634e72f5e0)), closes [#826](https://github.com/akash-network/console/issues/826)
+* upgrade nodejs version to 22.14 (latest lts) ([#1095](https://github.com/akash-network/console/issues/1095)) ([8533b35](https://github.com/akash-network/console/commit/8533b355762016829c4435fd67c7885df79b251e))
+
+
+### Bug Fixes
+
+* **deployment:** fix import sdl in render ([#1127](https://github.com/akash-network/console/issues/1127)) ([7e34b7c](https://github.com/akash-network/console/commit/7e34b7c1703ae76d77bdb76269b7cd7e9626ea04))
+
+
+### Code Refactoring
+
+* moves trial authorization spending out of db transaction ([#1129](https://github.com/akash-network/console/issues/1129)) ([8c8e372](https://github.com/akash-network/console/commit/8c8e3729ce7c1f7ad2c387b471b326f1fbc0d353))
+
+## [2.64.0](https://github.com/akash-network/console/compare/console-web/v2.63.0...console-web/v2.64.0) (2025-03-28)
+
+
+### Features
+
+* **deployment:** show banner for trial users with no bids ([#922](https://github.com/akash-network/console/issues/922)) ([344af36](https://github.com/akash-network/console/commit/344af36c7c9172f22e4bcfdc2ea3fe62284a49a8)), closes [#887](https://github.com/akash-network/console/issues/887)
+
+
+### Bug Fixes
+
+* change the link to "learn more" during tx sign ([#1122](https://github.com/akash-network/console/issues/1122)) ([e77d95a](https://github.com/akash-network/console/commit/e77d95ab4525fbae02bcca856040ae677f61fbf5))
+
+## [2.63.0](https://github.com/akash-network/console/compare/console-web/v2.62.4...console-web/v2.63.0) (2025-03-26)
+
+
+### Features
+
+* adds basic feature flags support to api and deploy-web ([#1113](https://github.com/akash-network/console/issues/1113)) ([130407c](https://github.com/akash-network/console/commit/130407ce8632cde4cea49394ba01267a1962d158))
+
+
+### Bug Fixes
+
+* update nextjs version ([#1105](https://github.com/akash-network/console/issues/1105)) ([5d24cd8](https://github.com/akash-network/console/commit/5d24cd851eac88a0fbf04899ffdda689994c2b8b))
+* update react-query in a few places ([#1084](https://github.com/akash-network/console/issues/1084)) ([7473929](https://github.com/akash-network/console/commit/7473929504ad9d3527688082084e521a64741a25)), closes [#337](https://github.com/akash-network/console/issues/337)
+
+## [2.62.4](https://github.com/akash-network/console/compare/console-web/v2.62.3...console-web/v2.62.4) (2025-03-24)
+
+
+### Bug Fixes
+
+* **deployment:** sign up for trial ([#1098](https://github.com/akash-network/console/issues/1098)) ([777340d](https://github.com/akash-network/console/commit/777340da91505a3dd1754ee5aea4e9d9f47f8108))
+
+## [2.62.3](https://github.com/akash-network/console/compare/console-web/v2.62.2...console-web/v2.62.3) (2025-03-21)
+
+
+### Bug Fixes
+
+* **auth:** removes turnstile widget before rendering ([bd32f01](https://github.com/akash-network/console/commit/bd32f0132e6151ebb46f6b03903cb0cbd82cbd4f))
+
+## [2.62.2](https://github.com/akash-network/console/compare/console-web/v2.62.1...console-web/v2.62.2) (2025-03-21)
+
+
+### Bug Fixes
+
+* **auth:** removes a turnstile widget before rendering ([153c1d1](https://github.com/akash-network/console/commit/153c1d157e837abf4597d1f0439f183b2cd45b92))
+
+## [2.62.1](https://github.com/akash-network/console/compare/console-web/v2.62.0...console-web/v2.62.1) (2025-03-20)
+
+
+### Bug Fixes
+
+* **auth:** removes a turnstile widget before rendering ([69bb2b0](https://github.com/akash-network/console/commit/69bb2b06c1c68fe96a16faf0f7e292c7d9a5aa9b))
+
+
+### Code Refactoring
+
+* enable eslint rules which restricts what dependencies can be used ([#1074](https://github.com/akash-network/console/issues/1074)) ([509fcd3](https://github.com/akash-network/console/commit/509fcd39831311950afdfb51c189ef46b02c855f))
+
+## [2.62.0](https://github.com/akash-network/console/compare/console-web/v2.61.1...console-web/v2.62.0) (2025-03-20)
+
+
+### Features
+
+* improves error logging for AggregateError ([#1072](https://github.com/akash-network/console/issues/1072)) ([c0ca85c](https://github.com/akash-network/console/commit/c0ca85c13b608457e65b8e90dad2d6cc310dd643))
+* introduce multi-line commands ([e58349b](https://github.com/akash-network/console/commit/e58349b7eeb5f28adc80dbedd4cf3b5ca304b72f)), closes [#175](https://github.com/akash-network/console/issues/175)
+
+
+### Bug Fixes
+
+* ensure release can detect changes for apps based on local packages ([#1070](https://github.com/akash-network/console/issues/1070)) ([e1053c4](https://github.com/akash-network/console/commit/e1053c456ba718fc58a93799e550e9338d9aea45))
+* updates dockerfile for node apps ([#1068](https://github.com/akash-network/console/issues/1068)) ([54194a0](https://github.com/akash-network/console/commit/54194a08ca514f1be623a20e7a01cfbbf2e2244a))
+
+## [2.61.1](https://github.com/akash-network/console/compare/console-web/v2.61.0...console-web/v2.61.1) (2025-03-19)
+
+
+### Code Refactoring
+
+* migrates console-web components to strict types ([#1050](https://github.com/akash-network/console/issues/1050)) ([bd1e3e7](https://github.com/akash-network/console/commit/bd1e3e734d249d36189d49e3fabad7d22d43fd99))
+* refactors console-web pages to strict types ([#1052](https://github.com/akash-network/console/issues/1052)) ([68c0ef0](https://github.com/akash-network/console/commit/68c0ef07ab35ce2a2bc5e94b8d47ce1740c98236))
+
+## [2.61.0](https://github.com/akash-network/console/compare/console-web/v2.60.0...console-web/v2.61.0) (2025-03-18)
+
+
+### Features
+
+* **deployment:** managed api deposit ([#1055](https://github.com/akash-network/console/issues/1055)) ([f407320](https://github.com/akash-network/console/commit/f40732079f79c39cceb533c82ac6d48f058dd388))
+
+## [2.60.0](https://github.com/akash-network/console/compare/console-web/v2.59.0...console-web/v2.60.0) (2025-03-18)
+
+
+### Features
+
+* **deployment:** limit number of deployments for trials ([#923](https://github.com/akash-network/console/issues/923)) ([d681d51](https://github.com/akash-network/console/commit/d681d51c02501f61b81742fb4fd36aea6f536cea)), closes [#827](https://github.com/akash-network/console/issues/827)
+
+## [2.59.0](https://github.com/akash-network/console/compare/console-web/v2.58.0...console-web/v2.59.0) (2025-03-17)
+
+
+### Features
+
+* **analytics:** move lease created script ([#1051](https://github.com/akash-network/console/issues/1051)) ([65ac516](https://github.com/akash-network/console/commit/65ac5163e2760ca25e71a9c8f686313304774413))
+
+## [2.58.0](https://github.com/akash-network/console/compare/console-web/v2.57.1...console-web/v2.58.0) (2025-03-17)
+
+
+### Features
+
+* **wallet:** improve coupon codes ux ([#1028](https://github.com/akash-network/console/issues/1028)) ([b4a81c7](https://github.com/akash-network/console/commit/b4a81c79b97213ae72d37efe4771129f5b69b5ef))
+
+
+### Code Refactoring
+
+* refactors queries and hooks to strict types ([#1044](https://github.com/akash-network/console/issues/1044)) ([6f520ba](https://github.com/akash-network/console/commit/6f520ba6e0fe4b38b39a61841141513b1c6c8980))
+
+## [2.57.1](https://github.com/akash-network/console/compare/console-web/v2.57.0...console-web/v2.57.1) (2025-03-14)
+
+
+### Bug Fixes
+
+* **wallet:** fix fetching of authz ([#1017](https://github.com/akash-network/console/issues/1017)) ([37a0b2d](https://github.com/akash-network/console/commit/37a0b2d0f29ed11e4aa0b11c1d4fd919094373fb))
+* **wallet:** fix top-up amount button spacing ([#964](https://github.com/akash-network/console/issues/964)) ([15ab5a2](https://github.com/akash-network/console/commit/15ab5a240db371ec19f16cd52a3723243c3a0ece)), closes [#668](https://github.com/akash-network/console/issues/668)
+
+## [2.57.0](https://github.com/akash-network/console/compare/console-web/v2.56.0...console-web/v2.57.0) (2025-03-13)
+
+
+### Features
+
+* **analytics:** adds more user onboarding events ([4e87ad4](https://github.com/akash-network/console/commit/4e87ad445d6e233dc1986e757b850082f65c172d))
+
+
+### Code Refactoring
+
+* refactors part of deploy-web to strict typescript types ([#1003](https://github.com/akash-network/console/issues/1003)) ([6ac6bb2](https://github.com/akash-network/console/commit/6ac6bb2ba919c933b923d40c56ea26f9788caed7))
+* refactors services in console-web to strict types ([#1004](https://github.com/akash-network/console/issues/1004)) ([fd85685](https://github.com/akash-network/console/commit/fd85685858b64ead49a946955fe8da48ea9cc49b))
+
+## [2.56.0](https://github.com/akash-network/console/compare/console-web/v2.55.0...console-web/v2.56.0) (2025-03-13)
+
+
+### Features
+
+* **analytics:** add pixels scripts ([#1005](https://github.com/akash-network/console/issues/1005)) ([010210b](https://github.com/akash-network/console/commit/010210b957f9cc53d867f26b635a6a0993bf5da6))
+* **deployment:** remove maintenance banner ([#1006](https://github.com/akash-network/console/issues/1006)) ([705952e](https://github.com/akash-network/console/commit/705952e5d5f29429e98399878b32b24f557b618e))
+
+## [2.55.0](https://github.com/akash-network/console/compare/console-web/v2.54.0...console-web/v2.55.0) (2025-03-11)
+
+
+### Features
+
+* **deployment:** re-add banner vars ([#992](https://github.com/akash-network/console/issues/992)) ([8575352](https://github.com/akash-network/console/commit/85753529636e238323f542db1c068304b60406de))
+
+## [2.54.0](https://github.com/akash-network/console/compare/console-web/v2.53.4...console-web/v2.54.0) (2025-03-11)
+
+
+### Features
+
+* **deployment:** add maintenant banner component ([#991](https://github.com/akash-network/console/issues/991)) ([d939e25](https://github.com/akash-network/console/commit/d939e25a9d03ad3876e6fdef624105a70a60c45d))
+
+
+### Code Refactoring
+
+* moves ProviderRawData and its unit tests under a single folder ([#978](https://github.com/akash-network/console/issues/978)) ([962fe7e](https://github.com/akash-network/console/commit/962fe7ea106ce9f62bb772358508d94cacb6fd38))
+
+## [2.53.4](https://github.com/akash-network/console/compare/console-web/v2.53.3...console-web/v2.53.4) (2025-03-10)
+
+
+### Bug Fixes
+
+* **template:** eliminates eternal loop when query if failing  ([ca93b51](https://github.com/akash-network/console/commit/ca93b5123725394094aada5149811de548717d94))
+
+## [2.53.3](https://github.com/akash-network/console/compare/console-web/v2.53.2...console-web/v2.53.3) (2025-03-10)
+
+
+### Bug Fixes
+
+* fix border clipping on EnvFormModal ([e8b2d5f](https://github.com/akash-network/console/commit/e8b2d5f90c16d25330995a07bec436968111b318))
+
+## [2.53.2](https://github.com/akash-network/console/compare/console-web/v2.53.1...console-web/v2.53.2) (2025-03-07)
+
+
+### Bug Fixes
+
+* ensure that sdl is truthy before passing it to `importSimpleDSL` ([#960](https://github.com/akash-network/console/issues/960)) ([08a00cd](https://github.com/akash-network/console/commit/08a00cd204f67c469da0ee607542cf6bcf0106a9))
+
+## [2.53.1](https://github.com/akash-network/console/compare/console-web/v2.53.0...console-web/v2.53.1) (2025-03-06)
+
+
+### Bug Fixes
+
+* handles case when service.uris is null ([#957](https://github.com/akash-network/console/issues/957)) ([82b43c5](https://github.com/akash-network/console/commit/82b43c58786bf31af94cd1c12c2ab572dede4fb5))
+* renders turnstile only on client side ([#949](https://github.com/akash-network/console/issues/949)) ([d282d20](https://github.com/akash-network/console/commit/d282d20ae2cb5e78704190a5016081766467d6ff))
+
+## [2.53.0](https://github.com/akash-network/console/compare/console-web/v2.52.0...console-web/v2.53.0) (2025-03-05)
+
+
+### Features
+
+* **certificate:** managed wallet api create certificates ([#903](https://github.com/akash-network/console/issues/903)) ([e00ef07](https://github.com/akash-network/console/commit/e00ef07444a9a8bce9c5c4d5749b4adff5e8903b))
+
+
+### Bug Fixes
+
+* ensure user has local certificate before checking lease status ([#943](https://github.com/akash-network/console/issues/943)) ([c53dfc1](https://github.com/akash-network/console/commit/c53dfc1006f2eb3ea30092efd05715f842090150))
+
+## [2.52.0](https://github.com/akash-network/console/compare/console-web/v2.51.0...console-web/v2.52.0) (2025-03-04)
+
+
+### Features
+
+* displays first lease service uri on deployment list if deployment name is unknown and small UX improvements ([#924](https://github.com/akash-network/console/issues/924)) ([f3e9b8d](https://github.com/akash-network/console/commit/f3e9b8d96878fab4cc89c37a2ad7747ab844c1b1))
+
+
+### Bug Fixes
+
+* **template:** forces templates seo meta rendering on the backend ([cc674d8](https://github.com/akash-network/console/commit/cc674d807526fde167c9a768ec2cd5be7075a040)), closes [#786](https://github.com/akash-network/console/issues/786)
+
+
+### Code Refactoring
+
+* replaces TemplatesContext with direct usage of useTemplates on top of react-query ([#935](https://github.com/akash-network/console/issues/935)) ([ce5dc1e](https://github.com/akash-network/console/commit/ce5dc1e04737765f76b486356d77d9ddc3723317))
+
+## [2.51.0](https://github.com/akash-network/console/compare/console-web/v2.50.0...console-web/v2.51.0) (2025-03-03)
+
+
+### Features
+
+* **analytics:** improves amplitude reporting ([c8399ae](https://github.com/akash-network/console/commit/c8399ae3a08d13de35679bd6e6acac49f504a66a))
+
+
+### Bug Fixes
+
+* **auth:** patches fetch to retry on cloudflare challenge ([c6f4c7d](https://github.com/akash-network/console/commit/c6f4c7d5f97e318cef77d232011dcee9b10f5aa8)), closes [#836](https://github.com/akash-network/console/issues/836)
+
+## [2.50.0](https://github.com/akash-network/console/compare/console-web/v2.49.1...console-web/v2.50.0) (2025-02-24)
+
+
+### Features
+
+* **billing:** unify deployment modals ([#804](https://github.com/akash-network/console/issues/804)) ([03137c6](https://github.com/akash-network/console/commit/03137c68740b76a7ad162415425b566148dd7bd3)), closes [#628](https://github.com/akash-network/console/issues/628) [#628](https://github.com/akash-network/console/issues/628) [#628](https://github.com/akash-network/console/issues/628) [#628](https://github.com/akash-network/console/issues/628) [#628](https://github.com/akash-network/console/issues/628)
+
+
+### Bug Fixes
+
+* **provider:** render longer provider names, make them copiable ([#898](https://github.com/akash-network/console/issues/898)) ([64f8fa0](https://github.com/akash-network/console/commit/64f8fa02a5b98a75b08382db97c0534ed26ed959)), closes [#858](https://github.com/akash-network/console/issues/858) [#858](https://github.com/akash-network/console/issues/858)
+
+## [2.49.1](https://github.com/akash-network/console/compare/console-web/v2.49.0...console-web/v2.49.1) (2025-02-21)
+
+
+### Bug Fixes
+
+* **deployment:** only enables auto top up if deposit is successful ([151b781](https://github.com/akash-network/console/commit/151b78178ff392fd2106e598bb01e481ddf8086d))
+
+## [2.49.0](https://github.com/akash-network/console/compare/console-web/v2.48.0...console-web/v2.49.0) (2025-02-20)
+
+
+### Features
+
+* **users:** api keys UI ([#857](https://github.com/akash-network/console/issues/857)) ([32f9567](https://github.com/akash-network/console/commit/32f9567f05590c2d9bbd6445366570c474f8e063))
+
+## [2.48.0](https://github.com/akash-network/console/compare/console-web/v2.47.0...console-web/v2.48.0) (2025-02-20)
+
+
+### Features
+
+* **deployment:** requires a deposit to maintain a deployment till the next auto top up ([e3ad957](https://github.com/akash-network/console/commit/e3ad9579d6336912b1e51ca8f983f64322571d2d)), closes [#714](https://github.com/akash-network/console/issues/714)
+
+
+### Bug Fixes
+
+* **sdl:** can use AMD GPUs  ([1569a35](https://github.com/akash-network/console/commit/1569a35fda166bab34d3ba5e41207acf2545ed80)), closes [#64](https://github.com/akash-network/console/issues/64)
+
+## [2.47.0](https://github.com/akash-network/console/compare/console-web/v2.46.0...console-web/v2.47.0) (2025-02-19)
+
+
+### Features
+
+* **auth:** adds turnstile interceptor to all the services ([f4b517a](https://github.com/akash-network/console/commit/f4b517a35a1bf54ccad26304f37c5213d8635ab8))
+
+## [2.46.0](https://github.com/akash-network/console/compare/console-web/v2.45.0...console-web/v2.46.0) (2025-02-19)
+
+
+### Features
+
+* **analytics:** integrates amplitude ([c88ff59](https://github.com/akash-network/console/commit/c88ff59c19c0096916afa3774b2d15a1bd30d3eb))
+
+## [2.45.0](https://github.com/akash-network/console/compare/console-web/v2.44.0...console-web/v2.45.0) (2025-02-14)
+
+
+### Features
+
+* **user:** add user api keys schema + api ([2eac7e9](https://github.com/akash-network/console/commit/2eac7e97246f63570bdd7d9d9700438e99948c7f)), closes [#787](https://github.com/akash-network/console/issues/787)
+
+
+### Bug Fixes
+
+* **sdl:** break controls earlier so columns don't overlap  ([c9d3b45](https://github.com/akash-network/console/commit/c9d3b4528a7a1e864f98541d1a93fbf7622f7cde)), closes [#828](https://github.com/akash-network/console/issues/828)
+
+## [2.44.0](https://github.com/akash-network/console/compare/console-web/v2.43.0...console-web/v2.44.0) (2025-02-10)
+
+
+### Features
+
+* **analytics:** lease conversion events ([76beedf](https://github.com/akash-network/console/commit/76beedf2cb17d94ca53df127a40f9cfabb852231)), closes [#817](https://github.com/akash-network/console/issues/817)
+
+## [2.43.0](https://github.com/akash-network/console/compare/console-web/v2.42.1...console-web/v2.43.0) (2025-02-07)
+
+
+### Features
+
+* **deployment:** creates setting if not exists on get ([66cd74b](https://github.com/akash-network/console/commit/66cd74b039e6fab8c848a296047d1669b9c5a574)), closes [#714](https://github.com/akash-network/console/issues/714)
+
+
+### Bug Fixes
+
+* ensure that deployment details are not fetched unless node api endpoint is not empty ([#806](https://github.com/akash-network/console/issues/806)) ([8fc4523](https://github.com/akash-network/console/commit/8fc4523034e06036bddc75378d1503d7ba8ead64))
+
+## [2.42.1](https://github.com/akash-network/console/compare/console-web/v2.42.0...console-web/v2.42.1) (2025-02-06)
+
+
+### Bug Fixes
+
+* **deployment:** adds usdc option to parse pricing amount ([0f38c18](https://github.com/akash-network/console/commit/0f38c18c521b2cc68fe79d3634623baea5a59f64)), closes [#714](https://github.com/akash-network/console/issues/714)
+
+## [2.42.0](https://github.com/akash-network/console/compare/console-web/v2.41.0...console-web/v2.42.0) (2025-02-06)
+
+
+### Features
+
+* **deployment:** adds auto top feature flag ([da008e9](https://github.com/akash-network/console/commit/da008e9251a52bbd53a0cc10ac3e026ddd8652f1)), closes [#714](https://github.com/akash-network/console/issues/714)
+
+## [2.41.0](https://github.com/akash-network/console/compare/console-web/v2.40.0...console-web/v2.41.0) (2025-02-06)
+
+
+### Features
+
+* adds certificate validation to ws proxy ([#780](https://github.com/akash-network/console/issues/780)) ([2d1cc3d](https://github.com/akash-network/console/commit/2d1cc3d7c39ec50ea3ca292d3d3bce47db3185ca)), closes [#170](https://github.com/akash-network/console/issues/170)
+* **deployment:** add new badge ([dd338ee](https://github.com/akash-network/console/commit/dd338ee7b4e6378a5627d4ea16fdf14a056145c6)), closes [#796](https://github.com/akash-network/console/issues/796)
+
+## [2.40.0](https://github.com/akash-network/console/compare/console-web/v2.39.0...console-web/v2.40.0) (2025-02-05)
+
+
+### Features
+
+* **deployment:** add help sidebar link ([54c501c](https://github.com/akash-network/console/commit/54c501c65276c621b7bf440d758a7c5a4ae3acb6)), closes [#788](https://github.com/akash-network/console/issues/788)
+
+## [2.39.0](https://github.com/akash-network/console/compare/console-web/v2.38.0...console-web/v2.39.0) (2025-02-05)
+
+
+### Features
+
+* **deployment:** implements ui auto top up toggle ([f03df32](https://github.com/akash-network/console/commit/f03df324e1064f76b477cf888278eb4ad8f443cf)), closes [#714](https://github.com/akash-network/console/issues/714)
+
+## [2.38.0](https://github.com/akash-network/console/compare/console-web/v2.37.1...console-web/v2.38.0) (2025-02-03)
+
+
+### Features
+
+* **deployment:** reworks top up deployments to rely on db setting ([2762b97](https://github.com/akash-network/console/commit/2762b97bbbb8d63566a258a683a5a0989f6885b4)), closes [#714](https://github.com/akash-network/console/issues/714)
+
+## [2.37.1](https://github.com/akash-network/console/compare/console-web/v2.37.0...console-web/v2.37.1) (2025-01-31)
+
+
+### Bug Fixes
+
+* **dx:** fix e2e tests ([9ab53ef](https://github.com/akash-network/console/commit/9ab53eff42a43c4f02757b4b19aa5877f25c366e)), closes [#741](https://github.com/akash-network/console/issues/741)
+
+## [2.37.0](https://github.com/akash-network/console/compare/console-web/v2.36.2...console-web/v2.37.0) (2025-01-30)
+
+
+### Features
+
+* **auth:** forwards cf cookies in proxy ([3711a9d](https://github.com/akash-network/console/commit/3711a9d3b780c2fb3215168cc017dd4794233faa))
+
+## [2.36.2](https://github.com/akash-network/console/compare/console-web/v2.36.1...console-web/v2.36.2) (2025-01-29)
+
+
+### Bug Fixes
+
+* **auth:** simplifies turnstile widget error display ([198fe5d](https://github.com/akash-network/console/commit/198fe5d893e6e0d501707a61711f0f8215b1849f))
+
+## [2.36.1](https://github.com/akash-network/console/compare/console-web/v2.36.0...console-web/v2.36.1) (2025-01-29)
+
+
+### Bug Fixes
+
+* **auth:** checks for cf error more generally ([1582ff8](https://github.com/akash-network/console/commit/1582ff81eff9fa0546c7c372d24a061756261840))
+
+## [2.36.0](https://github.com/akash-network/console/compare/console-web/v2.35.0...console-web/v2.36.0) (2025-01-29)
+
+
+### Features
+
+* adjusts logic to send provider and chain details to provider proxy ([#742](https://github.com/akash-network/console/issues/742)) ([a5ca831](https://github.com/akash-network/console/commit/a5ca8313c9ef545336889d8a536e4cf92c537c61))
+
+## [2.35.0](https://github.com/akash-network/console/compare/console-web/v2.34.0...console-web/v2.35.0) (2025-01-28)
+
+
+### Features
+
+* only shows turnstile widget when cf rejects ([#722](https://github.com/akash-network/console/issues/722)) ([0537f2c](https://github.com/akash-network/console/commit/0537f2cece2c9e1a95547f41ac5c802471342b94))
+
+
+### Code Refactoring
+
+* changes provider-proxy URL for console-web staging env ([#731](https://github.com/akash-network/console/issues/731)) ([e89994e](https://github.com/akash-network/console/commit/e89994e2f1c00780ba1f5d333eb87c600669ca80))
+
+## [2.34.0](https://github.com/akash-network/console/compare/console-web/v2.33.1...console-web/v2.34.0) (2025-01-27)
+
+
+### Features
+
+* **deployment:** add deepseek showcase ([#724](https://github.com/akash-network/console/issues/724)) ([926cae8](https://github.com/akash-network/console/commit/926cae830314c35cff8b03dfa76bc6719ab9da00))
+
+## [2.33.1](https://github.com/akash-network/console/compare/console-web/v2.33.0...console-web/v2.33.1) (2025-01-24)
+
+
+### Bug Fixes
+
+* **deployment:** fix deployment not found ([#709](https://github.com/akash-network/console/issues/709)) ([548e538](https://github.com/akash-network/console/commit/548e5387f2265290af872e35393b1f430737c9a3))
+
 ## [2.33.0](https://github.com/akash-network/console/compare/console-web/v2.32.0...console-web/v2.33.0) (2025-01-21)
 
 

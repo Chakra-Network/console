@@ -1,3 +1,5 @@
+import type { QueryKey } from "react-query";
+
 export class QueryKeys {
   static getFinancialDataKey = () => ["MARKET_DATA"];
   static getDashboardDataKey = () => ["DASHBOARD_DATA"];
@@ -46,6 +48,8 @@ export class QueryKeys {
   static getDepositParamsKey = () => ["DEPOSIT_PARAMS"];
   static getGpuModelsKey = () => ["GPU_MODELS"];
   static getTrialProvidersKey = () => ["TRIAL_PROVIDERS"];
+  static getDeploymentSettingKey = (userId: string, dseq: string) => ["DEPLOYMENT_SETTING", userId, dseq];
+  static getApiKeysKey = (userId: string) => ["API_KEYS", userId];
 
   // Remote deploy
   static getProviderTokenKey = () => ["TOKEN"];
@@ -63,4 +67,6 @@ export class QueryKeys {
 
   static getDeploymentGrantsKey = (granter: string, grantee: string) => ["DEPLOYMENT_GRANT", granter, grantee];
   static getFeeAllowancesKey = (granter: string, grantee: string) => ["FEE_ALLOWANCE", granter, grantee];
+
+  static getFeatureFlagsKey = (networkId: string) => ["FEATURE_FLAGS", networkId] as QueryKey;
 }

@@ -1,6 +1,8 @@
 "use client";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import type { MouseEventHandler, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import type { ActionButton } from "@akashnetwork/ui/components";
 import {
   Alert,
   CheckboxWithLabel,
@@ -21,7 +23,6 @@ import {
 } from "@akashnetwork/ui/components";
 import { zodResolver } from "@hookform/resolvers/zod";
 import compareAsc from "date-fns/compareAsc";
-import { event } from "nextjs-google-analytics";
 import { useSnackbar } from "notistack";
 import { z } from "zod";
 
@@ -30,11 +31,14 @@ import { UAKT_DENOM } from "@src/config/denom.config";
 import { usePricing } from "@src/context/PricingProvider";
 import { useSettings } from "@src/context/SettingsProvider";
 import { useWallet } from "@src/context/WalletProvider";
+import { useAddFundsVerifiedLoginRequiredEventHandler } from "@src/hooks/useAddFundsVerifiedLoginRequiredEventHandler";
 import { useDenomData, useWalletBalance } from "@src/hooks/useWalletBalance";
 import { useGranteeGrants } from "@src/queries/useGrantsQuery";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
+import { analyticsService } from "@src/services/analytics/analytics.service";
+import type { ServiceType } from "@src/types";
 import { denomToUdenom, udenomToDenom } from "@src/utils/mathHelpers";
 import { coinToUDenom } from "@src/utils/priceUtils";
+import { LeaseSpecDetail } from "../shared/LeaseSpecDetail";
 import { LinkTo } from "../shared/LinkTo";
 import { GranteeDepositMenuItem } from "./GranteeDepositMenuItem";
 
@@ -45,6 +49,8 @@ export type DeploymentDepositModalProps = {
   onDeploymentDeposit: (deposit: number, depositorAddress: string) => void;
   handleCancel: () => void;
   children?: ReactNode;
+  title?: string;
+  services?: ServiceType[];
 };
 
 const formSchema = z
@@ -73,7 +79,9 @@ export const DeploymentDepositModal: React.FunctionComponent<DeploymentDepositMo
   onDeploymentDeposit,
   disableMin,
   denom,
-  infoText = null
+  title = "Deployment Deposit",
+  infoText = null,
+  services = []
 }) => {
   const formRef = useRef<HTMLFormElement>(null);
   const { settings } = useSettings();
@@ -96,6 +104,18 @@ export const DeploymentDepositModal: React.FunctionComponent<DeploymentDepositMo
   const { handleSubmit, control, watch, setValue, clearErrors, unregister } = form;
   const { amount, useDepositor, depositorAddress } = watch();
   const validGrants = granteeGrants?.filter(x => compareAsc(new Date(), new Date(x.expiration)) !== 1 && x.authorization.spend_limit.denom === denom) || [];
+  const whenLoggedInAndVerified = useAddFundsVerifiedLoginRequiredEventHandler();
+
+  const closePopupAndGoToCheckoutIfPossible = (event: React.MouseEvent) => {
+    analyticsService.track("buy_credits_btn_clk", "Amplitude");
+    handleCancel();
+
+    whenLoggedInAndVerified(goToCheckout)(event);
+  };
+
+  const goToCheckout = () => {
+    window.location.href = "/api/proxy/v1/checkout";
+  };
 
   useEffect(() => {
     if (depositData && amount === 0 && !disableMin) {
@@ -114,7 +134,7 @@ export const DeploymentDepositModal: React.FunctionComponent<DeploymentDepositMo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useDepositor]);
 
-  async function checkDepositor(depositAmount) {
+  async function checkDepositor(depositAmount: number) {
     setIsCheckingDepositor(true);
 
     try {
@@ -122,7 +142,7 @@ export const DeploymentDepositModal: React.FunctionComponent<DeploymentDepositMo
       const data = await response.json();
 
       const grant = data.grants?.find(
-        x =>
+        (x: any) =>
           x.authorization["@type"] === "/akash.deployment.v1beta2.DepositDeploymentAuthorization" ||
           x.authorization["@type"] === "/akash.deployment.v1beta3.DepositDeploymentAuthorization"
       );
@@ -148,7 +168,7 @@ export const DeploymentDepositModal: React.FunctionComponent<DeploymentDepositMo
       }
 
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       enqueueSnackbar(<Snackbar title={err.message} iconVariant="error" />, { variant: "error" });
       return false;
@@ -158,6 +178,7 @@ export const DeploymentDepositModal: React.FunctionComponent<DeploymentDepositMo
   }
 
   const onClose = () => {
+    analyticsService.track("close_deposit_modal", "Amplitude");
     handleCancel();
   };
 
@@ -166,7 +187,7 @@ export const DeploymentDepositModal: React.FunctionComponent<DeploymentDepositMo
     setValue("amount", depositData?.max || 0);
   };
 
-  const onDepositClick = event => {
+  const onDepositClick: MouseEventHandler = event => {
     event.preventDefault();
     formRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
   };
@@ -188,8 +209,8 @@ export const DeploymentDepositModal: React.FunctionComponent<DeploymentDepositMo
         return;
       }
 
-      event(AnalyticsEvents.USE_DEPOSITOR, {
-        category: AnalyticsCategory.DEPLOYMENTS,
+      analyticsService.track("use_depositor", {
+        category: "deployments",
         label: "Use depositor to deposit in deployment"
       });
     } else if (depositData && amount > depositData?.balance) {
@@ -205,30 +226,63 @@ export const DeploymentDepositModal: React.FunctionComponent<DeploymentDepositMo
       fullWidth
       open
       variant="custom"
-      actions={[
-        {
-          label: "Cancel",
-          color: "primary",
-          variant: "ghost",
-          side: "left",
-          onClick: onClose
-        },
-        {
-          label: "Continue",
-          color: "secondary",
-          variant: "default",
-          side: "right",
-          disabled: !amount || isCheckingDepositor || (useDepositor && validGrants.length === 0) || !walletBalance,
-          isLoading: isCheckingDepositor,
-          onClick: onDepositClick,
-          "data-testid": "deposit-modal-continue-button"
-        }
-      ]}
+      actions={
+        [
+          {
+            label: "Cancel",
+            color: "primary",
+            variant: "ghost",
+            side: "left",
+            onClick: onClose
+          },
+          ...(isManaged
+            ? [
+                {
+                  label: "Buy credits",
+                  color: "primary",
+                  variant: "ghost",
+                  side: "right",
+                  onClick: closePopupAndGoToCheckoutIfPossible,
+                  "data-testid": "deposit-modal-buy-credits-button"
+                }
+              ]
+            : []),
+          {
+            label: "Continue",
+            color: "secondary",
+            variant: "default",
+            side: "right",
+            disabled: !amount || isCheckingDepositor || (useDepositor && validGrants.length === 0) || !walletBalance,
+            isLoading: isCheckingDepositor,
+            onClick: onDepositClick,
+            "data-testid": "deposit-modal-continue-button"
+          }
+        ] as ActionButton[]
+      }
       onClose={onClose}
-      maxWidth="xs"
       enableCloseOnBackdropClick
-      title="Deployment Deposit"
+      title={title}
     >
+      {services.length > 0 && (
+        <div className="mb-3 max-h-[300px] overflow-auto">
+          {services.map(service => {
+            return (
+              <Alert key={service.title} className="mb-1">
+                <div className="mb-2 break-all text-sm">
+                  <span className="font-bold">{service.title}</span>:{service.image}
+                </div>
+                <div className="flex items-center space-x-4 whitespace-nowrap">
+                  <LeaseSpecDetail type="cpu" className="flex-shrink-0" value={service.profile?.cpu} />
+                  {!!service.profile?.gpu && <LeaseSpecDetail type="gpu" className="flex-shrink-0" value={service.profile?.gpu} />}
+                  <LeaseSpecDetail type="ram" className="flex-shrink-0" value={`${service.profile?.ram} ${service.profile?.ramUnit}`} />
+                  <LeaseSpecDetail type="storage" className="flex-shrink-0" value={`${service.profile?.storage[0].size} ${service.profile?.storage[0].unit}`} />
+                </div>
+              </Alert>
+            );
+          })}
+        </div>
+      )}
+
       <Form {...form}>
         <form onSubmit={handleSubmit(onSubmit)} ref={formRef}>
           {infoText}

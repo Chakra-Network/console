@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Controller, SubmitHandler, useFieldArray, useForm } from "react-hook-form";
+import type { SubmitHandler } from "react-hook-form";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 import {
   Alert,
   AlertDescription,
@@ -29,15 +30,79 @@ import { useAtom } from "jotai";
 import { z } from "zod";
 
 import { useControlMachine } from "@src/context/ControlMachineProvider";
-import providerProcessStore, { ProviderAttribute } from "@src/store/providerProcessStore";
+import type { ProviderAttribute } from "@src/store/providerProcessStore";
+import providerProcessStore from "@src/store/providerProcessStore";
 import restClient from "@src/utils/restClient";
 import { sanitizeMachineAccess } from "@src/utils/sanityUtils";
 import { providerAttributesFormValuesSchema } from "../../types/providerAttributes";
+import { Title } from "../shared/Title";
 import { ResetProviderForm } from "./ResetProviderProcess";
 
 const attributeKeys = Object.keys(providerAttributesFormValuesSchema.shape);
 
-const DEFAULT_ATTRIBUTES = ['host', 'tier'];
+const DEFAULT_ATTRIBUTES = ["host", "tier"];
+
+interface GpuConfig {
+  count: number;
+  vendor: string;
+  name: string;
+  memory_size: string;
+  interface: string;
+}
+
+const createGpuAttributes = (gpuConfigs: GpuConfig[] | undefined) => {
+  // Return empty array if gpuConfigs is undefined, empty, or has no valid GPUs
+  if (!gpuConfigs || gpuConfigs.length === 0) return [];
+
+  // Filter out configurations with count=0 or null values
+  const validGpuConfigs = gpuConfigs.filter(
+    gpu => gpu.count !== 0 && gpu.vendor !== null && gpu.name !== null && gpu.memory_size !== null && gpu.interface !== null
+  );
+
+  if (validGpuConfigs.length === 0) return [];
+
+  // Get unique GPU configurations based on vendor, model, memory, and interface
+  const uniqueConfigs = validGpuConfigs.reduce(
+    (acc, gpu) => {
+      const key = `${gpu.vendor}-${gpu.name}-${gpu.memory_size}-${gpu.interface}`;
+      if (!acc[key]) {
+        acc[key] = gpu;
+      }
+      return acc;
+    },
+    {} as Record<string, GpuConfig>
+  );
+
+  return Object.values(uniqueConfigs).flatMap(gpu => {
+    const vendor = gpu.vendor.toLowerCase();
+    const model = gpu.name.toLowerCase();
+    const memory = gpu.memory_size;
+    const iface = gpu.interface.toLowerCase();
+
+    return [
+      {
+        key: "unknown-attributes",
+        value: "true",
+        customKey: `capabilities/gpu/vendor/${vendor}/model/${model}`
+      },
+      {
+        key: "unknown-attributes",
+        value: "true",
+        customKey: `capabilities/gpu/vendor/${vendor}/model/${model}/ram/${memory}`
+      },
+      {
+        key: "unknown-attributes",
+        value: "true",
+        customKey: `capabilities/gpu/vendor/${vendor}/model/${model}/ram/${memory}/interface/${iface}`
+      },
+      {
+        key: "unknown-attributes",
+        value: "true",
+        customKey: `capabilities/gpu/vendor/${vendor}/model/${model}/interface/${iface}`
+      }
+    ];
+  });
+};
 
 interface ProviderAttributesProps {
   existingAttributes?: ProviderAttribute[];
@@ -61,20 +126,24 @@ export const ProviderAttributes: React.FunctionComponent<ProviderAttributesProps
   const [providerProcess, setProviderProcess] = useAtom(providerProcessStore.providerProcessAtom);
   const organizationName = providerProcess.config?.organization;
 
+  // Collect GPU configurations from all machines
+  const gpuConfigs = providerProcess.machines?.map(machine => machine.systemInfo?.gpu).filter((gpu): gpu is GpuConfig => !!gpu);
+
   const form = useForm<ProviderFormValues>({
     resolver: zodResolver(providerFormSchema),
     defaultValues: {
       attributes: existingAttributes
         ? existingAttributes.map(attr => ({
-          key: attributeKeys.includes(attr.key) ? attr.key : "unknown-attributes",
-          value: attr.value,
-          customKey: attributeKeys.includes(attr.key) ? "" : attr.key
-        }))
+            key: attributeKeys.includes(attr.key) ? attr.key : "unknown-attributes",
+            value: attr.value,
+            customKey: attributeKeys.includes(attr.key) ? "" : attr.key
+          }))
         : [
-          { key: "host", value: "akash", customKey: "" },
-          { key: "tier", value: "community", customKey: "" },
-          { key: "organization", value: organizationName || "", customKey: "" }
-        ]
+            { key: "host", value: "akash", customKey: "" },
+            { key: "tier", value: "community", customKey: "" },
+            { key: "organization", value: organizationName || "", customKey: "" },
+            ...(gpuConfigs?.length ? createGpuAttributes(gpuConfigs) : [])
+          ]
     }
   });
 
@@ -85,6 +154,7 @@ export const ProviderAttributes: React.FunctionComponent<ProviderAttributesProps
   });
 
   const { activeControlMachine } = useControlMachine();
+  const isControlMachineConnected = !!activeControlMachine;
 
   const [showSuccess, setShowSuccess] = React.useState(false);
 
@@ -118,10 +188,10 @@ export const ProviderAttributes: React.FunctionComponent<ProviderAttributesProps
   };
 
   return (
-    <div className="flex w-full flex-col items-center pt-10">
-      <div className="w-full max-w-2xl space-y-6">
+    <div className={`flex w-full flex-col items-center ${!editMode ? "pt-10" : "pt-5"}`}>
+      <div className={`w-full ${!editMode ? "max-w-2xl" : ""} space-y-6`}>
         <div>
-          <h3 className="text-xl font-bold">{existingAttributes ? "Edit Provider Attributes" : "Provider Attributes"}</h3>
+          {existingAttributes ? <Title>Edit Provider Attributes</Title> : <h3 className="text-xl font-bold">Provider Attributes</h3>}
           <p className="text-muted-foreground text-sm">Attributes choosen here will be displayed publicly to the Console.</p>
           <p className="text-muted-foreground text-sm">It will be used for filtering and querying providers during bid process.</p>
         </div>
@@ -150,11 +220,7 @@ export const ProviderAttributes: React.FunctionComponent<ProviderAttributesProps
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <div>
-                                      <Select 
-                                        value={field.value} 
-                                        onValueChange={value => field.onChange(value)}
-                                        disabled={isDefaultAttribute}
-                                      >
+                                      <Select value={field.value} onValueChange={value => field.onChange(value)} disabled={isDefaultAttribute}>
                                         <SelectTrigger>{field.value || "Select Key"}</SelectTrigger>
                                         <SelectContent>
                                           {availableKeys.map(key => (
@@ -201,11 +267,7 @@ export const ProviderAttributes: React.FunctionComponent<ProviderAttributesProps
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div>
-                                    <Input 
-                                      placeholder="Value" 
-                                      {...field} 
-                                      disabled={isDefaultAttribute}
-                                    />
+                                    <Input placeholder="Value" {...field} disabled={isDefaultAttribute} />
                                   </div>
                                 </TooltipTrigger>
                                 {isDefaultAttribute && (
@@ -219,13 +281,7 @@ export const ProviderAttributes: React.FunctionComponent<ProviderAttributesProps
                           </FormItem>
                         )}
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => remove(index)}
-                        disabled={isDefaultAttribute}
-                      >
+                      <Button type="button" variant="outline" size="icon" onClick={() => remove(index)} disabled={isDefaultAttribute}>
                         <Trash className="h-4 w-4" />
                       </Button>
                     </div>
@@ -242,7 +298,9 @@ export const ProviderAttributes: React.FunctionComponent<ProviderAttributesProps
               <div className="flex w-full justify-between">
                 <div className="flex justify-start">{!editMode && <ResetProviderForm />}</div>
                 <div className="flex justify-end">
-                  <Button type="submit">{editMode ? "Update Attributes" : "Next"}</Button>
+                  <Button type="submit" disabled={editMode && !isControlMachineConnected}>
+                    {editMode ? "Update Attributes" : "Next"}
+                  </Button>
                 </div>
               </div>
             </form>

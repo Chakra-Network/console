@@ -1,5 +1,5 @@
 import subDays from "date-fns/subDays";
-import { and, desc, eq, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, lte, SQL, sql } from "drizzle-orm";
 import first from "lodash/first";
 import last from "lodash/last";
 import { singleton } from "tsyringe";
@@ -8,7 +8,9 @@ import { ApiPgDatabase, ApiPgTables, InjectPg, InjectPgTable } from "@src/core/p
 import { AbilityParams, BaseRepository } from "@src/core/repositories/base.repository";
 import { TxService } from "@src/core/services";
 
-export type UserOutput = ApiPgTables["Users"]["$inferSelect"];
+export type UserOutput = ApiPgTables["Users"]["$inferSelect"] & {
+  trial?: boolean;
+};
 export type UserInput = Partial<UserOutput>;
 
 @singleton()
@@ -29,19 +31,29 @@ export class UserRepository extends BaseRepository<ApiPgTables["Users"], UserInp
     return first(await this.cursor.insert(this.table).values(input).returning());
   }
 
-  async findByUserId(userId: UserOutput["userId"]) {
-    return await this.cursor.query.Users.findFirst({ where: this.whereAccessibleBy(eq(this.table.userId, userId)) });
+  async findById(id: UserOutput["id"]): Promise<UserOutput> {
+    return this.findUserWithWallet(eq(this.table.id, id));
+  }
+
+  async findByUserId(userId: UserOutput["userId"]): Promise<UserOutput> {
+    return this.findUserWithWallet(eq(this.table.userId, userId));
   }
 
   async findAnonymousById(id: UserOutput["id"]) {
     return await this.cursor.query.Users.findFirst({ where: this.whereAccessibleBy(and(eq(this.table.id, id), isNull(this.table.userId))) });
   }
 
-  async markAsActive(id: UserOutput["id"]) {
+  async markAsActive(id: UserOutput["id"], throttleTimeSeconds: number) {
     await this.cursor
       .update(this.table)
       .set({ lastActiveAt: sql`now()` })
-      .where(eq(this.table.id, id));
+      .where(
+        and(
+          // keep new line
+          eq(this.table.id, id),
+          lt(this.table.lastActiveAt, sql`now() - make_interval(secs => ${throttleTimeSeconds})`)
+        )
+      );
   }
 
   async paginateStaleAnonymousUsers(
@@ -64,5 +76,25 @@ export class UserRepository extends BaseRepository<ApiPgTables["Users"], UserInp
         await cb(items);
       }
     } while (lastId);
+  }
+
+  private async findUserWithWallet(whereClause: SQL<unknown>) {
+    const result = await this.cursor.query.Users.findFirst({
+      where: this.whereAccessibleBy(whereClause),
+      with: {
+        userWallets: {
+          columns: {
+            isTrialing: true
+          }
+        }
+      }
+    });
+
+    if (!result) return undefined;
+
+    return {
+      ...result,
+      trial: result.userWallets?.isTrialing ?? true
+    };
   }
 }

@@ -8,6 +8,7 @@ export const browserEnvSchema = z.object({
   NEXT_PUBLIC_UAKT_TOP_UP_MASTER_WALLET_ADDRESS: z.string(),
   NEXT_PUBLIC_USDC_TOP_UP_MASTER_WALLET_ADDRESS: z.string(),
   NEXT_PUBLIC_BILLING_ENABLED: coercedBoolean().optional().default("false"),
+  NEXT_PUBLIC_AUTO_TOP_UP_ENABLED: coercedBoolean().optional().default("false"),
   NEXT_PUBLIC_MANAGED_WALLET_NETWORK_ID: networkId.optional().default("mainnet"),
   NEXT_PUBLIC_DEFAULT_NETWORK_ID: networkId.optional().default("mainnet"),
   NEXT_PUBLIC_MANAGED_WALLET_DENOM: z.enum(["uakt", "usdc"]).optional().default("usdc"),
@@ -20,7 +21,11 @@ export const browserEnvSchema = z.object({
   NEXT_PUBLIC_BASE_API_MAINNET_URL: z.string().url(),
   NEXT_PUBLIC_BASE_API_TESTNET_URL: z.string().url(),
   NEXT_PUBLIC_BASE_API_SANDBOX_URL: z.string().url(),
-  NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string().optional(),
+  NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string(),
+  NEXT_PUBLIC_GA_ENABLED: coercedBoolean(),
+  NEXT_PUBLIC_AMPLITUDE_ENABLED: coercedBoolean(),
+  NEXT_PUBLIC_AMPLITUDE_API_KEY: z.string(),
+  NEXT_PUBLIC_AMPLITUDE_SAMPLING: z.number({ coerce: true }).optional().default(1),
   NEXT_PUBLIC_REDIRECT_URI: z.string().url(),
   NEXT_PUBLIC_GITHUB_APP_INSTALLATION_URL: z.string().url(),
   NEXT_PUBLIC_BITBUCKET_CLIENT_ID: z.string().optional(),
@@ -28,7 +33,10 @@ export const browserEnvSchema = z.object({
   NEXT_PUBLIC_GITHUB_CLIENT_ID: z.string().optional(),
   NEXT_PUBLIC_CI_CD_IMAGE_NAME: z.string(),
   NEXT_PUBLIC_TURNSTILE_ENABLED: coercedBoolean(),
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string()
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string(),
+  NEXT_PUBLIC_MAINTENANCE_BANNER_ENABLED: coercedBoolean().optional().default("false"),
+  NEXT_PUBLIC_MAINTENANCE_BANNER_MESSAGE: z.string().optional(),
+  NEXT_PUBLIC_MAINTENANCE_BANNER_MESSAGE_DATE: z.string().optional()
 });
 
 export const serverEnvSchema = browserEnvSchema.extend({
@@ -40,13 +48,16 @@ export const serverEnvSchema = browserEnvSchema.extend({
   AUTH0_CLIENT_SECRET: z.string(),
   AUTH0_AUDIENCE: z.string(),
   AUTH0_SCOPE: z.string(),
+  AUTH0_LOCAL_ENABLED: coercedBoolean().optional(),
+  AUTH0_REDIRECT_BASE_URL: z.string().url().optional(),
   BASE_API_MAINNET_URL: z.string().url(),
   BASE_API_TESTNET_URL: z.string().url(),
   BASE_API_SANDBOX_URL: z.string().url(),
   GITHUB_CLIENT_SECRET: z.string(),
   BITBUCKET_CLIENT_SECRET: z.string(),
   GITLAB_CLIENT_SECRET: z.string(),
-  NEXT_PUBLIC_CI_CD_IMAGE_NAME: z.string()
+  NEXT_PUBLIC_CI_CD_IMAGE_NAME: z.string(),
+  NEXT_PUBLIC_PROVIDER_PROXY_URL: z.string()
 });
 
 export type BrowserEnvConfig = z.infer<typeof browserEnvSchema>;

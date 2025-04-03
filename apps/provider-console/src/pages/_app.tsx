@@ -1,13 +1,14 @@
 import "@akashnetwork/ui/styles";
 import "../styles/index.css";
 
-import { QueryClientProvider } from "react-query";
-import { TooltipProvider } from "@akashnetwork/ui/components";
-import { GeistSans } from "geist/font/sans";
+import { Toaster, TooltipProvider } from "@akashnetwork/ui/components";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { GeistSans } from "geist/font/sans"; // eslint-disable-line import-x/no-unresolved
 import { Provider } from "jotai";
 import type { AppProps } from "next/app";
 import { ThemeProvider } from "next-themes";
 
+import GoogleAnalytics from "@src/components/layout/CustomGoogleAnalytics";
 import { ControlMachineProvider } from "@src/context/ControlMachineProvider";
 import { CustomChainProvider } from "@src/context/CustomChainProvider";
 import { ColorModeProvider } from "@src/context/CustomThemeContext";
@@ -23,7 +24,9 @@ export default function App({ Component, pageProps }: AppProps) {
       <QueryClientProvider client={queryClient}>
         <Provider>
           <ThemeProvider attribute="class" defaultTheme="system" storageKey="theme" enableSystem disableTransitionOnChange>
+            <Toaster />
             <ColorModeProvider>
+              <GoogleAnalytics />
               <PricingProvider>
                 <TooltipProvider>
                   <CustomChainProvider>

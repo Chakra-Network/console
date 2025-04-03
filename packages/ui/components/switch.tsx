@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
-import { nanoid } from "nanoid";
 
 import { cn } from "../utils";
 
@@ -32,8 +31,8 @@ const SwitchWithLabel = React.forwardRef<
     label: string;
     labelPosition?: "left" | "right";
   }
->(({ className, label, labelPosition = "right", ...props }) => {
-  const id = nanoid();
+>(({ className, label, labelPosition = "right", ...props }, ref) => {
+  const id = React.useId();
   const _label = (
     <label htmlFor={id} className="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
       {label}
@@ -43,7 +42,7 @@ const SwitchWithLabel = React.forwardRef<
   return (
     <div className={cn("flex cursor-pointer items-center space-x-2", className)}>
       {labelPosition === "left" && _label}
-      <Switch {...props} id={id} />
+      <Switch {...props} id={id} ref={ref} />
       {labelPosition === "right" && _label}
     </div>
   );

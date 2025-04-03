@@ -6,7 +6,7 @@ import { ResponsiveLineCanvas } from "@nivo/line";
 import { useTheme } from "next-themes";
 
 import { SELECTED_RANGE_VALUES } from "@src/config/graph.config";
-import { GraphResponse, ISnapshotMetadata, ProviderSnapshots, Snapshots, SnapshotValue } from "@src/types";
+import type { GraphResponse, ISnapshotMetadata, ProviderSnapshots, Snapshots, SnapshotValue } from "@src/types";
 import { customColors } from "@src/utils/colors";
 import { nFormatter, roundDecimal } from "@src/utils/mathHelpers";
 
@@ -27,8 +27,8 @@ const Graph: React.FunctionComponent<IGraphProps> = ({ rangedData, snapshotMetad
   const graphTheme = getTheme(resolvedTheme);
   const muiTheme = useMuiTheme();
   const smallScreen = useMediaQuery(muiTheme.breakpoints.down("sm"));
-  const minValue = rangedData && snapshotMetadata.unitFn(rangedData.map(x => x.value).reduce((a: number, b: number) => (a < b ? a : b))).value;
-  const maxValue = snapshotData && snapshotMetadata.unitFn(rangedData.map(x => x.value).reduce((a: number, b: number) => (a > b ? a : b))).value;
+  const minValue = rangedData && snapshotMetadata.unitFn(rangedData.map(x => x.value || 0).reduce((a, b) => (a < b ? a : b))).value;
+  const maxValue = snapshotData && snapshotMetadata.unitFn(rangedData.map(x => x.value || 0).reduce((a, b) => (a > b ? a : b))).value;
   const graphData = snapshotData
     ? [
         {

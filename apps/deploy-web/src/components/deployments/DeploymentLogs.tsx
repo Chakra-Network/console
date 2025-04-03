@@ -1,28 +1,26 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import useWebSocket from "react-use-websocket";
 import { Alert, Button, Checkbox, CheckboxWithLabel, DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, Spinner } from "@akashnetwork/ui/components";
 import { cn } from "@akashnetwork/ui/utils";
-import { Monaco } from "@monaco-editor/react";
+import type { Monaco } from "@monaco-editor/react";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { Download, MoreHoriz } from "iconoir-react";
-import { editor } from "monaco-editor";
-import { event } from "nextjs-google-analytics";
+import type { editor } from "monaco-editor";
 
 import { CustomDropdownLinkItem } from "@src/components/shared/CustomDropdownLinkItem";
 import { LinearLoadingSkeleton } from "@src/components/shared/LinearLoadingSkeleton";
 import { MemoMonaco } from "@src/components/shared/MemoMonaco";
 import { SelectCheckbox } from "@src/components/shared/SelectCheckbox";
 import ViewPanel from "@src/components/shared/ViewPanel";
-import { browserEnvConfig } from "@src/config/browser-env.config";
 import { useBackgroundTask } from "@src/context/BackgroundTaskProvider";
 import { useCertificate } from "@src/context/CertificateProvider";
+import { useProviderWebsocket } from "@src/hooks/useProviderWebsocket";
 import { useThrottledCallback } from "@src/hooks/useThrottle";
 import { useLeaseStatus } from "@src/queries/useLeaseQuery";
 import { useProviderList } from "@src/queries/useProvidersQuery";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
-import { LeaseDto } from "@src/types/deployment";
+import { analyticsService } from "@src/services/analytics/analytics.service";
+import type { LeaseDto } from "@src/types/deployment";
 import { LeaseSelect } from "./LeaseSelect";
 
 export type LOGS_MODE = "logs" | "events";
@@ -54,16 +52,11 @@ export const DeploymentLogs: React.FunctionComponent<Props> = ({ leases, selecte
     data: leaseStatus,
     refetch: getLeaseStatus,
     isFetching: isLoadingStatus
-  } = useLeaseStatus(providerInfo?.hostUri || "", selectedLease as LeaseDto, {
+  } = useLeaseStatus(providerInfo, selectedLease as LeaseDto, {
     enabled: false
   });
-  const { sendJsonMessage } = useWebSocket(browserEnvConfig.NEXT_PUBLIC_PROVIDER_PROXY_URL_WS, {
-    onOpen: () => {},
-    onMessage: onLogReceived,
-    onError: error => console.error("error", error),
-    shouldReconnect: () => {
-      return true;
-    }
+  const { sendJsonMessage } = useProviderWebsocket(providerInfo, {
+    onMessage: onLogReceived
   });
   const muiTheme = useMuiTheme();
   const smallScreen = useMediaQuery(muiTheme.breakpoints.down("md"));
@@ -127,24 +120,22 @@ export const DeploymentLogs: React.FunctionComponent<Props> = ({ leases, selecte
 
     logs.current = [];
 
-    let url: string | null = null;
+    let url: string;
     if (selectedLogsMode === "logs") {
-      url = `${providerInfo.hostUri}/lease/${selectedLease.dseq}/${selectedLease.gseq}/${selectedLease.oseq}/logs?follow=true&tail=100`;
+      url = `/lease/${selectedLease.dseq}/${selectedLease.gseq}/${selectedLease.oseq}/logs?follow=true&tail=100`;
 
       if (selectedServices.length < services.length) {
         url += "&service=" + selectedServices.join(",");
       }
     } else {
-      url = `${providerInfo.hostUri}/lease/${selectedLease.dseq}/${selectedLease.gseq}/${selectedLease.oseq}/kubeevents?follow=true`;
+      url = `/lease/${selectedLease.dseq}/${selectedLease.gseq}/${selectedLease.oseq}/kubeevents?follow=true`;
     }
 
     setIsLoadingLogs(true);
 
     sendJsonMessage({
       type: "websocket",
-      url: url,
-      certPem: localCert?.certPem,
-      keyPem: localCert?.keyPem
+      url
     });
   }, [
     isLocalCertMatching,
@@ -160,7 +151,7 @@ export const DeploymentLogs: React.FunctionComponent<Props> = ({ leases, selecte
     providerInfo
   ]);
 
-  function onLogReceived(event) {
+  function onLogReceived(event: MessageEvent) {
     const message = JSON.parse(event.data).message;
 
     setIsLoadingLogs(true);
@@ -203,7 +194,7 @@ export const DeploymentLogs: React.FunctionComponent<Props> = ({ leases, selecte
     }
   }, [logText, stickToBottom]);
 
-  function handleLeaseChange(id) {
+  function handleLeaseChange(id: string) {
     setSelectedLease(leases?.find(x => x.id === id) || null);
 
     if (id !== selectedLease?.id) {
@@ -216,7 +207,7 @@ export const DeploymentLogs: React.FunctionComponent<Props> = ({ leases, selecte
     }
   }
 
-  const onSelectedServicesChange = selected => {
+  const onSelectedServicesChange = (selected: string[]) => {
     setSelectedServices(selected);
 
     setLogText("");
@@ -228,10 +219,10 @@ export const DeploymentLogs: React.FunctionComponent<Props> = ({ leases, selecte
     if (!isDownloadingLogs && providerInfo && selectedLease) {
       setIsDownloadingLogs(true);
       const isLogs = selectedLogsMode === "logs";
-      await downloadLogs(providerInfo.hostUri, selectedLease.dseq, selectedLease.gseq, selectedLease.oseq, isLogs);
+      await downloadLogs(providerInfo, selectedLease.dseq, selectedLease.gseq, selectedLease.oseq, isLogs);
 
-      event(AnalyticsEvents.DOWNLOADED_LOGS, {
-        category: AnalyticsCategory.DEPLOYMENTS,
+      analyticsService.track("downloaded_logs", {
+        category: "deployments",
         label: isLogs ? "Downloaded deployment logs" : "Downloaded deployment events"
       });
 
@@ -247,7 +238,7 @@ export const DeploymentLogs: React.FunctionComponent<Props> = ({ leases, selecte
             <>
               <div className="flex h-[56px] items-center space-x-4 p-2">
                 <div className="flex items-center">
-                  {(leases?.length || 0) > 1 && <LeaseSelect leases={leases} defaultValue={selectedLease.id} onSelectedChange={handleLeaseChange} />}
+                  {(leases?.length || 0) > 1 && <LeaseSelect leases={leases || []} defaultValue={selectedLease.id} onSelectedChange={handleLeaseChange} />}
 
                   {services?.length > 0 && canSetConnection && (
                     <div className={cn({ ["ml-2"]: (leases?.length || 0) > 1 })}>

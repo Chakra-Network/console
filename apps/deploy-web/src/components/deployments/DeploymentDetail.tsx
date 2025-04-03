@@ -1,13 +1,13 @@
 "use client";
 
-import { createRef, FC, useEffect, useState } from "react";
+import type { FC } from "react";
+import { createRef, useEffect, useState } from "react";
 import { Alert, Button, buttonVariants, Spinner, Tabs, TabsList, TabsTrigger } from "@akashnetwork/ui/components";
 import { cn } from "@akashnetwork/ui/utils";
 import { ArrowLeft } from "iconoir-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { NextSeo } from "next-seo";
-import { event } from "nextjs-google-analytics";
 
 import { useCertificate } from "@src/context/CertificateProvider";
 import { useSettings } from "@src/context/SettingsProvider";
@@ -15,8 +15,8 @@ import { useWallet } from "@src/context/WalletProvider";
 import { useDeploymentDetail } from "@src/queries/useDeploymentQuery";
 import { useDeploymentLeaseList } from "@src/queries/useLeaseQuery";
 import { useProviderList } from "@src/queries/useProvidersQuery";
+import { analyticsService } from "@src/services/analytics/analytics.service";
 import { extractRepositoryUrl, isCiCdImageInYaml } from "@src/services/remote-deploy/remote-deployment-controller.service";
-import { AnalyticsCategory, AnalyticsEvents } from "@src/types/analytics";
 import { RouteStep } from "@src/types/route-steps.type";
 import { getDeploymentLocalData } from "@src/utils/deploymentLocalDataUtils";
 import { UrlService } from "@src/utils/urlUtils";
@@ -87,7 +87,7 @@ export const DeploymentDetail: FC<DeploymentDetailProps> = ({ dseq }) => {
     }
   });
 
-  const isDeploymentNotFound = (deploymentError && (deploymentError as any).response?.data?.message?.includes("Deployment not found")) || !address;
+  const isDeploymentNotFound = deploymentError && (deploymentError as any).response?.data?.message?.includes("Deployment not found") && !isLoadingDeployment;
   const hasLeases = leases && leases.length > 0;
   const { isLocalCertMatching, localCert, isCreatingCert, createCertificate } = useCertificate();
   const { data: providers, isFetching: isLoadingProviders, refetch: getProviders } = useProviderList();
@@ -126,7 +126,7 @@ export const DeploymentDetail: FC<DeploymentDetailProps> = ({ dseq }) => {
     loadDeploymentDetail();
   }
 
-  const onChangeTab = value => {
+  const onChangeTab = (value: string) => {
     setActiveTab(value);
 
     // clear tab mode
@@ -134,9 +134,10 @@ export const DeploymentDetail: FC<DeploymentDetailProps> = ({ dseq }) => {
       router.replace(UrlService.deploymentDetails(dseq));
     }
 
-    event(`${AnalyticsEvents.NAVIGATE_TAB}${value}`, {
-      category: AnalyticsCategory.DEPLOYMENTS,
-      label: `Navigate tab ${value} in deployment detail`
+    analyticsService.track(`navigate_tab`, {
+      category: "deployments",
+      label: `Navigate tab ${value} in deployment detail`,
+      tab: value
     });
   };
 
@@ -151,6 +152,7 @@ export const DeploymentDetail: FC<DeploymentDetailProps> = ({ dseq }) => {
           removeLeases={removeLeases}
           setActiveTab={setActiveTab}
           deployment={deployment}
+          leases={leases}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { FaqAnchorType } from "@src/pages/faq";
+import type { FaqAnchorType } from "@src/pages/faq";
 import networkStore from "@src/store/networkStore";
 
 export type NewDeploymentParams = {
@@ -34,6 +34,7 @@ export class UrlService {
 
   // User
   static userSettings = () => "/user/settings";
+  static userApiKeys = () => "/user/api-keys";
   static userFavorites = () => `/user/settings/favorites`;
   static userProfile = (username: string) => `/profile/${username}`;
   static login = (returnUrl?: string) => {
@@ -52,7 +53,7 @@ export class UrlService {
   // Deploy
   static deploymentList = () => `/deployments`;
   static deploymentDetails = (dseq: string, tab?: string, logsMode?: string) => `/deployments/${dseq}${appendSearchParams({ tab, logsMode })}`;
-  static templates = (category?: string, search?: string) => `/templates${appendSearchParams({ category, search })}`;
+  static templates = (category?: string | null, search?: string) => `/templates${appendSearchParams({ category, search })}`;
   static templateDetails = (templateId: string) => `/templates/${templateId}`;
   static providers = (sort?: string) => `/providers${appendSearchParams({ sort })}`;
   static providerDetail = (owner: string) => `/providers/${owner}${appendSearchParams({ network: networkStore.selectedNetworkId })}`;
@@ -95,7 +96,7 @@ export function removeEmptyFilters(obj: { [key: string]: string }) {
   return copy;
 }
 
-export function handleDocClick(ev, url) {
+export function handleDocClick(ev: React.MouseEvent<any>, url: string): void {
   ev.preventDefault();
 
   window.open(url, "_blank");

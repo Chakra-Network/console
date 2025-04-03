@@ -7,6 +7,7 @@ services:
       target: production-nginx
       args:
         WORKSPACE: apps/api
+        GITHUB_PAT: ${GITHUB_PAT}
 
   indexer:
     image: ${INDEXER_REPO:-console-indexer}:${INDEXER_TAG:-latest}
@@ -44,6 +45,7 @@ services:
       target: production
       args:
         WORKSPACE: apps/stats-web
+        DEPLOYMENT_ENV: ${DEPLOYMENT_ENV}
 
   provider-console:
     image: ${PROVIDER_CONSOLE_REPO:-console-provider}:${PROVIDER_CONSOLE_TAG:-latest}

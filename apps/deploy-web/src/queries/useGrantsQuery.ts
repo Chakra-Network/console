@@ -1,8 +1,9 @@
-import { QueryObserverResult, useQuery } from "react-query";
+import type { QueryObserverResult } from "react-query";
+import { useQuery } from "react-query";
 
-import { useSettings } from "@src/context/SettingsProvider";
+import { useSettings } from "@src/context/SettingsProvider"; // eslint-disable-line import-x/no-cycle
 import { useAuthZService } from "@src/hooks/useAuthZService";
-import { AllowanceType, GrantType } from "@src/types/grant";
+import type { AllowanceType, GrantType } from "@src/types/grant";
 import { ApiUrlService, loadWithPagination } from "@src/utils/apiUtils";
 import { QueryKeys } from "./queryKeys";
 
@@ -29,7 +30,7 @@ export function useGranteeGrants(address?: string, options: { enabled?: boolean;
 
   // TODO: ensure app is not loaded till settings are fetched
   //   Issue: https://github.com/akash-network/console/issues/600
-  options.enabled = !!options.enabled && !!address && !!settings.apiEndpoint;
+  options.enabled = options.enabled !== false && !!address && !!settings.apiEndpoint;
 
   return useQuery(
     QueryKeys.getGranteeGrants(address || "UNDEFINED"),

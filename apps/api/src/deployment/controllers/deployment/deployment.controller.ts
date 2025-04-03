@@ -1,25 +1,89 @@
+import assert from "http-assert";
 import { singleton } from "tsyringe";
 
-import { StaleManagedDeploymentsCleanerService } from "@src/deployment/services/stale-managed-deployments-cleaner/stale-managed-deployments-cleaner.service";
-import { TopUpCustodialDeploymentsService } from "@src/deployment/services/top-up-custodial-deployments/top-up-custodial-deployments.service";
-import { TopUpManagedDeploymentsService } from "@src/deployment/services/top-up-managed-deployments/top-up-managed-deployments.service";
-import { TopUpDeploymentsOptions } from "@src/deployment/types/deployments-refiller";
-import { CleanUpStaleDeploymentsParams } from "@src/deployment/types/state-deployments";
+import { AuthService, Protected } from "@src/auth/services/auth.service";
+import { UserWalletRepository } from "@src/billing/repositories";
+import {
+  CloseDeploymentResponse,
+  CreateDeploymentRequest,
+  CreateDeploymentResponse,
+  DepositDeploymentRequest,
+  DepositDeploymentResponse,
+  GetDeploymentResponse,
+  UpdateDeploymentRequest,
+  UpdateDeploymentResponse
+} from "@src/deployment/http-schemas/deployment.schema";
+import { DeploymentService } from "@src/deployment/services/deployment/deployment.service";
 
 @singleton()
-export class TopUpDeploymentsController {
+export class DeploymentController {
   constructor(
-    private readonly topUpDeploymentsService: TopUpCustodialDeploymentsService,
-    private readonly topUpManagedDeploymentsService: TopUpManagedDeploymentsService,
-    private readonly staleDeploymentsCleanerService: StaleManagedDeploymentsCleanerService
+    private readonly deploymentService: DeploymentService,
+    private readonly authService: AuthService,
+    private readonly userWalletRepository: UserWalletRepository
   ) {}
 
-  async topUpDeployments(options: TopUpDeploymentsOptions) {
-    await this.topUpDeploymentsService.topUpDeployments(options);
-    await this.topUpManagedDeploymentsService.topUpDeployments(options);
+  @Protected([{ action: "sign", subject: "UserWallet" }])
+  async findByDseqAndUserId(dseq: string, userId?: string): Promise<GetDeploymentResponse> {
+    const { currentUser, ability } = this.authService;
+
+    const userWallet = await this.userWalletRepository.accessibleBy(ability, "sign").findOneByUserId(userId ?? currentUser.id);
+    assert(userWallet, 404, "UserWallet Not Found");
+
+    const deployment = await this.deploymentService.findByOwnerAndDseq(userWallet.address, dseq);
+
+    return {
+      data: deployment
+    };
   }
 
-  async cleanUpStaleDeployment(options: CleanUpStaleDeploymentsParams) {
-    await this.staleDeploymentsCleanerService.cleanup(options);
+  @Protected([{ action: "sign", subject: "UserWallet" }])
+  async create(input: CreateDeploymentRequest["data"]): Promise<CreateDeploymentResponse> {
+    const { currentUser, ability } = this.authService;
+
+    const userWallet = await this.userWalletRepository.accessibleBy(ability, "sign").findOneByUserId(currentUser.id);
+    assert(userWallet, 404, "UserWallet Not Found");
+
+    const result = await this.deploymentService.create(userWallet, input);
+
+    return {
+      data: result
+    };
+  }
+
+  @Protected([{ action: "sign", subject: "UserWallet" }])
+  async close(dseq: string): Promise<CloseDeploymentResponse> {
+    const { currentUser, ability } = this.authService;
+
+    const userWallet = await this.userWalletRepository.accessibleBy(ability, "sign").findOneByUserId(currentUser.id);
+    assert(userWallet, 404, "UserWallet Not Found");
+
+    const result = await this.deploymentService.close(userWallet, dseq);
+
+    return { data: result };
+  }
+
+  @Protected([{ action: "sign", subject: "UserWallet" }])
+  async deposit(input: DepositDeploymentRequest["data"]): Promise<DepositDeploymentResponse> {
+    const { currentUser, ability } = this.authService;
+
+    const userWallet = await this.userWalletRepository.accessibleBy(ability, "sign").findOneByUserId(currentUser.id);
+    assert(userWallet, 404, "UserWallet Not Found");
+
+    const result = await this.deploymentService.deposit(userWallet, input.dseq, input.deposit);
+
+    return { data: result };
+  }
+
+  @Protected([{ action: "sign", subject: "UserWallet" }])
+  async update(dseq: string, input: UpdateDeploymentRequest["data"]): Promise<UpdateDeploymentResponse> {
+    const { currentUser, ability } = this.authService;
+
+    const userWallet = await this.userWalletRepository.accessibleBy(ability, "sign").findOneByUserId(currentUser.id);
+    assert(userWallet, 404, "UserWallet Not Found");
+
+    const result = await this.deploymentService.update(userWallet, dseq, input);
+
+    return { data: result };
   }
 }

@@ -1,14 +1,18 @@
 import { LoggerService } from "@akashnetwork/logging";
+import { ForbiddenError } from "@casl/ability";
 import { context, trace } from "@opentelemetry/api";
 import type { Event } from "@sentry/types";
 import type { Context, Env } from "hono";
 import { isHttpError } from "http-errors";
 import omit from "lodash/omit";
+import { DatabaseError } from "sequelize";
 import { singleton } from "tsyringe";
 import { ZodError } from "zod";
 
+import { AuthService } from "@src/auth/services/auth.service";
 import { InjectSentry, Sentry } from "@src/core/providers/sentry.provider";
-import { SentryEventService } from "@src/core/services/sentry-event/sentry-event.service";
+import type { AppContext } from "../../types/app-context";
+import { SentryEventService } from "../sentry-event/sentry-event.service";
 
 @singleton()
 export class HonoErrorHandlerService {
@@ -16,13 +20,14 @@ export class HonoErrorHandlerService {
 
   constructor(
     @InjectSentry() private readonly sentry: Sentry,
-    private readonly sentryEventService: SentryEventService
+    private readonly sentryEventService: SentryEventService,
+    private readonly authService: AuthService
   ) {
     this.handle = this.handle.bind(this);
   }
 
-  async handle<E extends Env = any>(error: Error, c: Context<E>): Promise<Response> {
-    this.logger.error(error);
+  async handle(error: Error, c: AppContext): Promise<Response> {
+    this.logger.error(this.sequelizeErrorToObj(error));
 
     if (isHttpError(error)) {
       const { name } = error.constructor;
@@ -33,12 +38,16 @@ export class HonoErrorHandlerService {
       return c.json({ error: "BadRequestError", data: error.errors }, { status: 400 });
     }
 
+    if (error instanceof ForbiddenError) {
+      return c.json({ error: "ForbiddenError", message: "Forbidden" }, { status: 403 });
+    }
+
     await this.reportError(error, c);
 
     return c.json({ error: "InternalServerError" }, { status: 500 });
   }
 
-  private async reportError<E extends Env = any>(error: Error, c: Context<E>): Promise<void> {
+  private async reportError(error: Error, c: AppContext): Promise<void> {
     try {
       const id = this.sentry.captureEvent(await this.getSentryEvent(error, c));
       this.logger.info({ event: "SENTRY_EVENT_REPORTED", id });
@@ -47,13 +56,30 @@ export class HonoErrorHandlerService {
     }
   }
 
-  private async getSentryEvent<E extends Env = any>(error: Error, c: Context<E>): Promise<Event> {
+  private async getSentryEvent(error: Error, c: AppContext): Promise<Event> {
     const event = this.sentry.addRequestDataToEvent(this.sentryEventService.toEvent(error), {
       method: c.req.method,
       url: c.req.url,
       headers: omit(Object.fromEntries(c.req.raw.headers), ["x-anonymous-user-id"]),
       body: await this.getSentryEventRequestBody(c)
     });
+
+    const { currentUser } = this.authService;
+
+    if (currentUser) {
+      event.user = {
+        id: currentUser.id
+      };
+    }
+
+    const clientInfo = c.get("clientInfo");
+
+    if (clientInfo) {
+      event.fingerprint = [clientInfo.fingerprint];
+      event.user = event.user || {};
+      event.user.ip_address = clientInfo.ip;
+    }
+
     const currentSpan = trace.getSpan(context.active());
 
     if (currentSpan) {
@@ -82,5 +108,18 @@ export class HonoErrorHandlerService {
       default:
         return undefined;
     }
+  }
+
+  private sequelizeErrorToObj(error: unknown) {
+    if (error instanceof DatabaseError) {
+      return {
+        name: error.name,
+        message: error.message,
+        sql: error.sql,
+        stack: error.stack
+      };
+    }
+
+    return error;
   }
 }

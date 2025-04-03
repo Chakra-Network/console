@@ -14,7 +14,8 @@ import { NavArrowDown, Refresh } from "iconoir-react";
 import { z } from "zod";
 
 import { NodeStatus } from "@src/components/shared/NodeStatus";
-import { BlockchainNode, useSettings } from "@src/context/SettingsProvider/SettingsProviderContext";
+import type { BlockchainNode } from "@src/context/SettingsProvider/SettingsProviderContext";
+import { useSettings } from "@src/context/SettingsProvider/SettingsProviderContext";
 
 const formSchema = z.object({
   apiEndpoint: z
@@ -52,7 +53,7 @@ export const SettingsForm: React.FunctionComponent = () => {
     refreshNodeStatuses(newSettings);
   };
 
-  const onNodeChange = (event, newNodeId) => {
+  const onNodeChange = (_: unknown, newNodeId: string) => {
     const newNode = nodes.find(n => n.id === newNodeId);
     const apiEndpoint = newNode?.api as string;
     const rpcEndpoint = newNode?.rpc as string;

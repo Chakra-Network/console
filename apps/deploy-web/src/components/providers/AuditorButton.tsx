@@ -1,9 +1,10 @@
 "use client";
-import { MouseEvent, useState } from "react";
+import type { MouseEvent } from "react";
+import { useState } from "react";
 import { Button } from "@akashnetwork/ui/components";
 import { BadgeCheck } from "iconoir-react";
 
-import { ClientProviderDetailWithStatus, ClientProviderList } from "@src/types/provider";
+import type { ClientProviderDetailWithStatus, ClientProviderList } from "@src/types/provider";
 import { AuditorsModal } from "./AuditorsModal";
 
 type Props = {
@@ -13,7 +14,7 @@ type Props = {
 export const AuditorButton: React.FunctionComponent<Props> = ({ provider }) => {
   const [isViewingAuditors, setIsViewingAuditors] = useState(false);
 
-  const onAuditorClick = event => {
+  const onAuditorClick = (event: MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
 

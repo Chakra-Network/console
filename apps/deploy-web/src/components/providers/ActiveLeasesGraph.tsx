@@ -10,7 +10,7 @@ import { TimeRange } from "@src/components/shared/TimeRange";
 import { SELECTED_RANGE_VALUES } from "@src/config/graph.config";
 import { useProviderActiveLeasesGraph } from "@src/queries/useProvidersQuery";
 import { ProviderSnapshots } from "@src/types";
-import { ClientProviderDetailWithStatus } from "@src/types/provider";
+import type { ClientProviderDetailWithStatus } from "@src/types/provider";
 import { percIncrease } from "@src/utils/mathHelpers";
 import { getSnapshotMetadata } from "@src/utils/providerUtils";
 import { Title } from "../shared/Title";
@@ -41,7 +41,7 @@ export const ActiveLeasesGraph: React.FunctionComponent<IProps> = ({ provider })
         </Title>
       </div>
 
-      {!snapshotData && status === "loading" && (
+      {!snapshotData && status === "pending" && (
         <div className="flex items-center justify-center">
           <Spinner size="large" />
         </div>

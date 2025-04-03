@@ -12,9 +12,9 @@ import { TimeRange } from "@/components/graph/TimeRange";
 import { SELECTED_RANGE_VALUES } from "@/config/date.config";
 import { percIncrease } from "@/lib/mathHelpers";
 import { getProviderSnapshotMetadata } from "@/lib/providerUtils";
-import { SNAPSHOT_NOT_FOUND } from "@/lib/snapshotsUrlHelpers";
+import type { SNAPSHOT_NOT_FOUND } from "@/lib/snapshotsUrlHelpers";
 import { useProviderGraphSnapshot } from "@/queries";
-import { ProviderSnapshots } from "@/types";
+import type { ProviderSnapshots } from "@/types";
 
 const Graph = dynamic(() => import("../../../components/graph/Graph"), {
   ssr: false
@@ -64,7 +64,7 @@ export default function GraphContainer({ snapshot }: IGraphProps) {
 
   return (
     <>
-      {!snapshotData && status === "loading" && (
+      {!snapshotData && status === "pending" && (
         <div className="mb-4 mt-16 flex items-center justify-center">
           <Spinner size="large" />
         </div>

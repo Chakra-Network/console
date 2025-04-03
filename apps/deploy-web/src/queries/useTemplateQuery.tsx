@@ -1,4 +1,6 @@
-import { QueryKey, useMutation, useQuery, useQueryClient, UseQueryOptions, UseQueryResult } from "react-query";
+import { useMemo } from "react";
+import type { QueryKey, UseQueryOptions } from "react-query";
+import { useMutation, useQuery, useQueryClient } from "react-query";
 import type { TemplateCategory, TemplateOutputSummary } from "@akashnetwork/http-sdk";
 import { Snackbar } from "@akashnetwork/ui/components";
 import axios from "axios";
@@ -7,7 +9,7 @@ import { useSnackbar } from "notistack";
 
 import { useCustomUser } from "@src/hooks/useCustomUser";
 import { services } from "@src/services/http/http-browser.service";
-import { ITemplate } from "@src/types";
+import type { ITemplate } from "@src/types";
 import { UrlService } from "@src/utils/urlUtils";
 import { QueryKeys } from "./queryKeys";
 
@@ -60,7 +62,7 @@ export function useSaveUserTemplate(isNew: boolean = false) {
       }),
     {
       onSuccess: (_response, newTemplate) => {
-        queryClient.setQueryData(QueryKeys.getTemplateKey(_response.data), (oldData: ITemplate) => {
+        queryClient.setQueryData<Partial<ITemplate>>(QueryKeys.getTemplateKey(_response.data), oldData => {
           return { ...oldData, ...newTemplate };
         });
 
@@ -140,12 +142,25 @@ export interface CategoriesAndTemplates {
   templates: TemplateOutputSummaryWithCategory[];
 }
 
-export function useTemplates(options = {}): UseQueryResult<CategoriesAndTemplates> {
-  return useQuery(QueryKeys.getTemplatesKey(), () => getTemplates(), {
+export interface CategoriesAndTemplatesResult extends CategoriesAndTemplates {
+  isLoading: boolean;
+}
+
+export function useTemplates(options = {}): CategoriesAndTemplatesResult {
+  const query = useQuery(QueryKeys.getTemplatesKey(), () => getTemplates(), {
     ...options,
     refetchInterval: 60000 * 2, // Refetch templates every 2 minutes
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false
   });
+
+  return useMemo(
+    () => ({
+      isLoading: query.isFetching,
+      categories: query.data?.categories || [],
+      templates: query.data?.templates || []
+    }),
+    [query.isFetching, query.data]
+  );
 }

@@ -1,18 +1,18 @@
 "use client";
-import { Dispatch, ReactNode, SetStateAction } from "react";
+import type { ReactNode } from "react";
 import { CustomTooltip } from "@akashnetwork/ui/components";
 import { cn } from "@akashnetwork/ui/utils";
 import { InfoCircle } from "iconoir-react";
 
 import { useSdlBuilder } from "@src/context/SdlBuilderProvider/SdlBuilderProvider";
-import { ServiceType } from "@src/types";
+import type { ServiceType } from "@src/types";
 import { FormPaper } from "./FormPaper";
 
 type Props = {
   currentService: ServiceType;
   serviceIndex?: number;
   children?: ReactNode;
-  setIsEditingExpose: Dispatch<SetStateAction<boolean | number>>;
+  setIsEditingExpose: (value: boolean | number) => void;
 };
 
 export const ExposeList: React.FunctionComponent<Props> = ({ currentService, setIsEditingExpose, serviceIndex }) => {
